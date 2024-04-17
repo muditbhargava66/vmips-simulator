@@ -20,7 +20,7 @@ VMIPS Rust is a Rust implementation of a MIPS-like processor simulator. It inclu
 
 1. Clone the repository:
    ```shell
-   git clone https://github.com/your-username/vmips-rust.git
+   git clone git@github.com:muditbhargava66/vimps-simulator.git
    ```
 
 2. Change to the project directory:

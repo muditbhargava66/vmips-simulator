@@ -1,0 +1,18 @@
+# Cargo.toml
+[package]
+name = "vmips_rust"
+version = "0.1.0"
+authors = ["Your Name <your.email@example.com>"]
+edition = "2021"
+
+[dependencies]
+log = "0.4.14"
+env_logger = "0.8.4"
+
+[lib]
+name = "vmips_rust"
+path = "src/lib.rs"
+
+[[bin]]
+name = "vmips_rust"
+path = "src/main.rs"

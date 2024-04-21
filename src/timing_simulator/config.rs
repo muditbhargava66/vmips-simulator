@@ -1,4 +1,6 @@
 // config.rs
+
+#[derive(Debug)]
 pub struct CacheConfig {
     pub size: usize,
     pub associativity: usize,
@@ -6,6 +8,7 @@ pub struct CacheConfig {
     pub replacement_policy: ReplacementPolicy,
 }
 
+#[derive(Debug)]
 pub enum ReplacementPolicy {
     LRU,
     // Add more replacement policies as needed

@@ -44,6 +44,6 @@ fn test_timing_simulator() {
     // assert_eq!(simulator.registers.read(/* Register number */), /* Expected value */);
     // assert_eq!(simulator.memory.read_word(/* Memory address */), /* Expected value */);
     assert_eq!(simulator.registers.read(2), 42);
-    assert_eq!(simulator.memory.read_word(0x1000), 0xDEADBEEF);
+    assert_eq!(simulator.memory.read_word(0x1000), Some(0xDEADBEEF));
     // ...
 }

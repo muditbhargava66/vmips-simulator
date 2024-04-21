@@ -1,4 +1,5 @@
 // instructions.rs
+
 use super::registers::Registers;
 use super::memory::Memory;
 
@@ -8,12 +9,14 @@ pub enum Instruction {
     And { rd: u32, rs: u32, rt: u32 },
     Or { rd: u32, rs: u32, rt: u32 },
     Slt { rd: u32, rs: u32, rt: u32 },
+    Sll { rd: u32, rt: u32, shamt: u32 },
+    Srl { rd: u32, rt: u32, shamt: u32 },
     Addi { rt: u32, rs: u32, imm: i16 },
     Lw { rt: u32, base: u32, offset: i16 },
     Sw { rt: u32, base: u32, offset: i16 },
     Beq { rs: u32, rt: u32, offset: i16 },
     J { target: u32 },
-    // Add more instructions as needed
+    InvalidInstruction,
 }
 
 impl Instruction {
@@ -54,6 +57,18 @@ impl Instruction {
                 registers.write(*rd, result);
                 None
             }
+            Instruction::Sll { rd, rt, shamt } => {
+                let rt_value = registers.read(*rt);
+                let result = rt_value << shamt;
+                registers.write(*rd, result);
+                None
+            }
+            Instruction::Srl { rd, rt, shamt } => {
+                let rt_value = registers.read(*rt);
+                let result = rt_value >> shamt;
+                registers.write(*rd, result);
+                None
+            }
             Instruction::Addi { rt, rs, imm } => {
                 let rs_value = registers.read(*rs);
                 let result = rs_value.wrapping_add(*imm as u32);
@@ -63,16 +78,23 @@ impl Instruction {
             Instruction::Lw { rt, base, offset } => {
                 let base_value = registers.read(*base);
                 let address = base_value.wrapping_add(*offset as u32);
-                let value = memory.read_word(address as usize);
-                registers.write(*rt, value);
-                None
+                match memory.read_word(address as usize) {
+                    Some(value) => {
+                        registers.write(*rt, value);
+                        None
+                    }
+                    None => Some(address),
+                }
             }
             Instruction::Sw { rt, base, offset } => {
                 let base_value = registers.read(*base);
                 let address = base_value.wrapping_add(*offset as u32);
                 let value = registers.read(*rt);
-                memory.write_word(address as usize, value);
-                None
+                if memory.write_word(address as usize, value) {
+                    None
+                } else {
+                    Some(address)
+                }
             }
             Instruction::Beq { rs, rt, offset } => {
                 let rs_value = registers.read(*rs);
@@ -84,7 +106,20 @@ impl Instruction {
                 }
             }
             Instruction::J { target } => Some(*target),
-            // Add more instruction execution logic as needed
+            Instruction::InvalidInstruction => None,
+        }
+    }
+
+    pub fn get_address(&self, registers: &Registers, pc: u32) -> u32 {
+        match self {
+            Instruction::Lw { base, offset, .. } |
+            Instruction::Sw { base, offset, .. } => {
+                let base_value = registers.read(*base);
+                base_value.wrapping_add(*offset as u32)
+            }
+            Instruction::Beq { offset, .. } => pc.wrapping_add(*offset as u32),
+            Instruction::J { target } => *target,
+            _ => 0,
         }
     }
 }

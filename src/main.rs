@@ -1,7 +1,9 @@
 // main.rs
 use std::env;
 use vmips_rust::functional_simulator::simulator::Simulator as FunctionalSimulator;
+use vmips_rust::functional_simulator::memory::Memory;
 use vmips_rust::timing_simulator::simulator::Simulator as TimingSimulator;
+use vmips_rust::timing_simulator::config::{CacheConfig, ReplacementPolicy};
 use vmips_rust::utils::logger::{Logger, LogLevel};
 
 fn main() {
@@ -21,21 +23,29 @@ fn main() {
 
     match simulator_type.as_str() {
         "functional" => {
-            let memory_size = 1024; // Adjust the memory size as needed
+            let memory_size = 8192; // Adjust the memory size as needed
             let mut simulator = FunctionalSimulator::new(memory_size);
-
+    
             // Load program into memory
             let program = vec![
-                0x00000000, // Add your program instructions here
-                0x00000000,
-                0x00000000,
-                // ...
+                0x00000000u32, // nop
+                0x00000000u32, // nop
+                0x8C020000u32, // lw $2, 0($0)
+                0x8C030004u32, // lw $3, 4($0)
+                0x00430820u32, // add $1, $2, $3
+                0xAC010008u32, // sw $1, 8($0)
             ];
-            simulator.load_program(&program);
-
+            let program_bytes = unsafe {
+                std::slice::from_raw_parts(
+                    program.as_ptr() as *const u8,
+                    program.len() * std::mem::size_of::<u32>(),
+                )
+            };
+            simulator.load_program(program_bytes);
+    
             // Run the functional simulator
             simulator.run();
-
+    
             // Log the final state
             logger.info(&format!("Registers: {:?}", simulator.registers));
             logger.info(&format!("Memory: {:?}", simulator.memory.data));
@@ -45,24 +55,24 @@ fn main() {
                 num_stages: 5,
                 stage_latencies: vec![1, 1, 1, 1, 1],
             };
-            let instr_cache_config = vmips_rust::timing_simulator::config::CacheConfig {
-                size: 256,
-                associativity: 2,
-                block_size: 64,
-                replacement_policy: vmips_rust::timing_simulator::config::ReplacementPolicy::LRU,
-            };
-            let data_cache_config = vmips_rust::timing_simulator::config::CacheConfig {
-                size: 512,
+            let instr_cache_config = CacheConfig {
+                size: 2048, // Increase the cache size
                 associativity: 4,
                 block_size: 64,
-                replacement_policy: vmips_rust::timing_simulator::config::ReplacementPolicy::LRU,
+                replacement_policy: ReplacementPolicy::LRU,
             };
-            let memory_size = 1024; // Adjust the memory size as needed
+            let data_cache_config = CacheConfig {
+                size: 2048, // Increase the cache size
+                associativity: 4,
+                block_size: 64,
+                replacement_policy: ReplacementPolicy::LRU,
+            };
+            let memory_size = 8192; // Adjust the memory size as needed
             let mut simulator = TimingSimulator::new(
                 pipeline_config,
                 instr_cache_config,
                 data_cache_config,
-                memory_size,
+                memory_size, // Pass memory_size instead of memory
             );
 
             // Load program into memory

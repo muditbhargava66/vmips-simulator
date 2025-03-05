@@ -29,38 +29,65 @@ impl Simulator {
 
     pub fn run(&mut self) {
         let mut stall_cycles = 0;
-        let mut data_hazard = false;
-        let mut control_hazard = false;
-
+        let mut error_count = 0;     // Counter to track consecutive errors
+        const MAX_ERRORS: usize = 5; // Maximum consecutive errors before ending simulation
+        
         loop {
             if stall_cycles > 0 {
                 stall_cycles -= 1;
                 continue;
             }
-
+    
             let instruction = self.fetch_instruction();
-
+            
+            // Check if we hit an invalid instruction
+            if let Instruction::InvalidInstruction = instruction {
+                println!("Invalid instruction encountered at PC: 0x{:08X}", self.pc);
+                break;
+            }
+    
             // Check for data hazards
-            data_hazard = self.check_data_hazard(&instruction);
-            if data_hazard {
+            if self.check_data_hazard(&instruction) {
                 // Stall the pipeline for data hazard
                 stall_cycles = self.pipeline.stages.len() - 1;
                 continue;
             }
-
+    
             // Check for control hazards
-            control_hazard = self.check_control_hazard(&instruction);
-            if control_hazard {
+            if self.check_control_hazard(&instruction) {
                 // Flush the pipeline for control hazard
                 self.pipeline.flush();
             }
-
-            let _latency = self.pipeline.execute(&instruction, &self.registers, self.pc);
+    
+            // Execute the instruction and check for errors
+            let result = self.pipeline.execute(&instruction, &self.registers, self.pc);
+            
+            // If we get a very high latency, it's likely due to a cache miss or error
+            if result > 20 {
+                error_count += 1;
+                if error_count >= MAX_ERRORS {
+                    println!("Ending simulation after {} consecutive cache/memory errors", MAX_ERRORS);
+                    println!("Last instruction at PC: 0x{:08X}", self.pc);
+                    break;
+                }
+            } else {
+                // Reset error count on successful execution
+                error_count = 0;
+            }
+            
             self.pc += 4;
-
+    
+            // Prevent runaway execution - if PC gets too large, exit
+            if self.pc >= self.memory.size as u32 {
+                println!("PC exceeded memory size bounds. Ending simulation.");
+                break;
+            }
+    
             // Update the registers and memory based on the executed instruction
             self.update_state(&instruction);
         }
+        
+        println!("Simulation complete. Final PC: 0x{:08X}", self.pc);
     }
 
     fn fetch_instruction(&mut self) -> Instruction {

@@ -3,6 +3,7 @@
 use super::registers::Registers;
 use super::memory::Memory;
 
+#[derive(Debug)]
 pub enum Instruction {
     Add { rd: u32, rs: u32, rt: u32 },
     Sub { rd: u32, rs: u32, rt: u32 },
@@ -16,6 +17,14 @@ pub enum Instruction {
     Sw { rt: u32, base: u32, offset: i16 },
     Beq { rs: u32, rt: u32, offset: i16 },
     J { target: u32 },
+    // Additional instruction variants
+    Lui { rt: u32, imm: u16 },        // Load Upper Immediate
+    Ori { rt: u32, rs: u32, imm: u16 }, // OR Immediate
+    Mult { rs: u32, rt: u32 },         // Multiply
+    Mflo { rd: u32 },                  // Move from LO register
+    Addiu { rt: u32, rs: u32, imm: i16 }, // Add Immediate Unsigned
+    Bne { rs: u32, rt: u32, offset: i16 }, // Branch if Not Equal
+    Jr { rs: u32 },
     InvalidInstruction,
 }
 
@@ -106,6 +115,61 @@ impl Instruction {
                 }
             }
             Instruction::J { target } => Some(*target),
+            // New instruction implementations
+            Instruction::Lui { rt, imm } => {
+                let value = (*imm as u32) << 16;
+                registers.write(*rt, value);
+                None
+            }
+            Instruction::Ori { rt, rs, imm } => {
+                let rs_value = registers.read(*rs);
+                let result = rs_value | (*imm as u32);
+                registers.write(*rt, result);
+                None
+            }
+            Instruction::Mult { rs, rt } => {
+                let rs_value = registers.read(*rs);
+                let rt_value = registers.read(*rt);
+                let result = rs_value.wrapping_mul(rt_value);
+                
+                // Ensure we have space for LO register
+                if registers.data.len() <= 32 {
+                    registers.data.resize(33, 0);
+                }
+                registers.data[32] = result; // Store in LO register (index 32)
+                None
+            }
+            Instruction::Mflo { rd } => {
+                // Get value from LO register
+                let lo_value = if registers.data.len() > 32 {
+                    registers.data[32]
+                } else {
+                    0
+                };
+                registers.write(*rd, lo_value);
+                None
+            }
+            Instruction::Addiu { rt, rs, imm } => {
+                let rs_value = registers.read(*rs);
+                let result = rs_value.wrapping_add(*imm as u32);
+                registers.write(*rt, result);
+                None
+            }
+            Instruction::Bne { rs, rt, offset } => {
+                let rs_value = registers.read(*rs);
+                let rt_value = registers.read(*rt);
+                if rs_value != rt_value {
+                    Some(*offset as u32)
+                } else {
+                    None
+                }
+            }
+            Instruction::Jr { rs } => {
+                // Jump to the address stored in register rs
+                let target_address = registers.read(*rs);
+                println!("JR: Jumping to address in register ${}: 0x{:08X}", rs, target_address);
+                Some(target_address >> 2) // Return the target address divided by 4
+            }
             Instruction::InvalidInstruction => None,
         }
     }
@@ -117,8 +181,25 @@ impl Instruction {
                 let base_value = registers.read(*base);
                 base_value.wrapping_add(*offset as u32)
             }
-            Instruction::Beq { offset, .. } => pc.wrapping_add(*offset as u32),
-            Instruction::J { target } => *target,
+            Instruction::Beq { offset, .. } |
+            Instruction::Bne { offset, .. } => {
+                // PC-relative addressing for branch instructions
+                // Note: In MIPS, the branch target is PC + 4 + (offset << 2)
+                // But since we're incrementing PC by 4 elsewhere, we use:
+                pc.wrapping_add((*offset as u32) << 2)
+            }
+            Instruction::J { target } => {
+                // In MIPS, J-type instructions use the upper 4 bits of the current PC
+                // combined with the 26-bit target shifted left by 2
+                (pc & 0xF0000000) | (*target << 2)
+            }
+            Instruction::Jr { rs } => {
+                // Get the target address from the register
+                registers.read(*rs)
+            }
+            Instruction::Lui { .. } |
+            Instruction::Ori { .. } |
+            Instruction::Mflo { .. } => 0, // These don't directly access memory
             _ => 0,
         }
     }

@@ -1,13 +1,19 @@
 # Cargo.toml
 [package]
 name = "vmips_rust"
-version = "0.1.0"
-authors = ["Your Name <your.email@example.com>"]
+version = "0.1.1"
+authors = ["Mudit Bhargava <muditbhargava66@gmail.com>"]
 edition = "2021"
+description = "A MIPS processor simulator written in Rust"
+readme = "README.md"
+repository = "https://github.com/muditbhargava66/vmips-simulator"
+license = "MIT"
+keywords = ["mips", "simulator", "processor", "education", "architecture"]
+categories = ["emulators", "simulation"]
 
 [dependencies]
 log = "0.4.14"
-env_logger = "0.8.4"
+env_logger = "0.9.0"
 
 [lib]
 name = "vmips_rust"
@@ -16,3 +22,16 @@ path = "src/lib.rs"
 [[bin]]
 name = "vmips_rust"
 path = "src/main.rs"
+
+[dev-dependencies]
+criterion = "0.3"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+opt-level = 3
+
+[profile.dev]
+opt-level = 0
+debug = true

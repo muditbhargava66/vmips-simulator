@@ -11,13 +11,13 @@ pub fn parse_instruction(instruction_str: &str) -> Instruction {
             let rs = parse_register(parts[2]);
             let rt = parse_register(parts[3]);
             Instruction::Add { rd, rs, rt }
-        }
+        },
         "addi" => {
             let rt = parse_register(parts[1]);
             let rs = parse_register(parts[2]);
             let imm = parts[3].parse().unwrap();
             Instruction::Addi { rt, rs, imm }
-        }
+        },
         // Parse more instructions as needed
         _ => panic!("Unsupported instruction: {}", instruction_str),
     }

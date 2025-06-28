@@ -37,3 +37,35 @@ Cargo.lock
 
 # Remove Cargo.lock from gitignore if creating a library
 # Cargo.lock
+
+# OS specific files
+Thumbs.db
+.Spotlight-V100
+.Trashes
+
+# Benchmark results
+criterion/
+target/criterion/
+
+# Profiling data
+*.profdata
+*.profraw
+perf.data
+perf.data.old
+
+# Coverage reports
+*.lcov
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# VMIPS specific
+*.mips
+*.asm
+*.bin
+*.hex
+vmips_rust.log

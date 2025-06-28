@@ -1,7 +1,7 @@
 # Cargo.toml
 [package]
 name = "vmips_rust"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Mudit Bhargava <muditbhargava66@gmail.com>"]
 edition = "2021"
 description = "A MIPS processor simulator written in Rust"
@@ -14,6 +14,8 @@ categories = ["emulators", "simulation"]
 [dependencies]
 log = "0.4.14"
 env_logger = "0.9.0"
+rand = "0.8.5"
+colored = "2.0.0"
 
 [lib]
 name = "vmips_rust"
@@ -22,6 +24,10 @@ path = "src/lib.rs"
 [[bin]]
 name = "vmips_rust"
 path = "src/main.rs"
+
+[[bin]]
+name = "main_assembler"
+path = "src/main_assembler.rs"
 
 [dev-dependencies]
 criterion = "0.3"
@@ -35,3 +41,11 @@ opt-level = 3
 [profile.dev]
 opt-level = 0
 debug = true
+
+[features]
+bin = []  # Feature for building the assembler as a binary
+no_clone = []  # Feature to control Clone implementation for Memory
+
+[[bench]]
+name = "simulator_benchmarks"
+harness = false

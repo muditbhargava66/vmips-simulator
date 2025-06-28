@@ -1,3 +1,4 @@
 // mod.rs
-pub mod parser;
 pub mod logger;
+pub mod parser;
+pub mod syscall;

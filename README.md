@@ -8,6 +8,9 @@
 [![Contributors](https://img.shields.io/github/contributors/muditbhargava66/vmips-simulator)](https://github.com/muditbhargava66/vmips-simulator/graphs/contributors)
 
 **VMIPS Rust is a Rust implementation of a MIPS processor simulator. It includes a functional simulator and a timing simulator for the VMIPS architecture.**
+
+![Project Banner](assets/github-banner.svg)
+
 </div>
 
 ## Features
@@ -124,10 +127,6 @@ cargo test
 ## Contributing
 
 Contributions to VMIPS Rust are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request.
-
-## Repository Banner
-
-The GitHub repository includes a social media preview banner located at `assets/github-banner.svg`. This banner is designed to provide an attractive preview when the repository is shared on social media platforms.
 
 ## License
 

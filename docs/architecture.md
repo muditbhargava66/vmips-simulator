@@ -1,104 +1,80 @@
-# VMIPS Simulator Architecture
+# Architecture Overview
 
-This document describes the high-level architecture of the VMIPS Simulator, explaining its components and design philosophy.
+The VMIPS Rust simulator is designed with a modular architecture, allowing for flexible simulation of various MIPS processor configurations. It primarily consists of a **Functional Simulator** and a **Timing Simulator**, complemented by an **Assembler** and **Visualization Tools**.
 
-## System Overview
+## High-Level System Flow
 
-![VMIPS Architecture Diagram](images/architecture.png)
+```
++-----------------+       +-----------------+
+| MIPS Assembly   |       | VMIPS Rust      |
+| Code (.s files) |------>| Assembler       |
++-----------------+       | (main_assembler)|
+                          +--------+--------+
+                                   |
+                                   v
+                          +-----------------+
+                          | Binary Program  |
+                          | (.bin file)     |
+                          +--------+--------+
+                                   |
+                                   v
+                 +-------------------------------------+
+                 |          VMIPS Rust Simulator       |
+                 |          (vmips_rust executable)    |
+                 +-------------------------------------+
+                 |                                     |
+        +--------v--------+                   +--------v--------+
+        | Functional      |                   | Timing Simulator|
+        | Simulator       |                   | (Pipelined,     |
+        | (Correctness)   |                   |  Performance)   |
+        +-----------------+                   +-----------------+
+                 |                                     |
+        +--------v----------------+--------------------v--------+
+        |              Visualization & Debugging                |
+        |              (Logs, Dumps, Statistics)                |
+        +-------------------------------------------------------+
+```
 
-The VMIPS Simulator consists of several major components:
+## Component Breakdown
 
-1. **Functional Simulator** - A cycle-accurate functional model of a MIPS processor
-2. **Timing Simulator** - A pipelined model with performance analysis capabilities
-3. **Assembler** - Converts MIPS assembly to machine code
-4. **Memory System** - Models memory hierarchy with caches
-5. **Register File** - Maintains processor state
-6. **Utilities** - Includes logging, parsing, and visualization tools
+### 1. Assembler (`src/assembler/`)
 
-## Component Details
+The built-in assembler converts MIPS assembly code (`.s` files) into machine code (binary programs). It supports a wide range of MIPS instructions, directives (e.g., `.data`, `.text`, `.word`, `.byte`, `.half`, `.ascii`, `.asciiz`, `.space`, `.align`), and pseudo-instructions (e.g., `move`, `li`, `la`, `b`). It performs two passes to handle labels and symbol resolution.
 
-### Functional Simulator
+### 2. Functional Simulator (`src/functional_simulator/`)
 
-Located in `src/functional_simulator/`, this component:
+The functional simulator focuses solely on the correct execution of MIPS instructions and the accurate update of the architectural state (registers and memory). It does not model any timing aspects or pipeline behavior. It's primarily used for verifying the correctness of instruction implementations and for simple program execution.
 
-- Implements all core MIPS instructions
-- Maintains accurate processor state
-- Performs instruction fetch, decode, and execute cycles
-- Models memory and register accesses
+**Key Sub-components:**
+-   **Simulator Core**: Manages the simulation loop, instruction fetch-decode-execute cycle, PC management, and exception handling.
+-   **Instruction Set**: Defines and implements the behavior of each MIPS instruction.
+-   **Memory System**: Models byte-addressable memory with word, halfword, and byte access modes, including alignment checks.
+-   **Register File**: Implements 32 general-purpose registers, HI/LO registers, and 32 floating-point registers.
 
-Key files:
-- `simulator.rs` - Main simulation loop and instruction handling
-- `instructions.rs` - Instruction definitions and execution
-- `memory.rs` - Memory access and management
-- `registers.rs` - Register file implementation
+### 3. Timing Simulator (`src/timing_simulator/`)
 
-### Timing Simulator
+The timing simulator is a more advanced component that models the cycle-by-cycle behavior of a MIPS processor, including various microarchitectural features:
 
-Located in `src/timing_simulator/`, this component:
+-   **Pipelined Execution**: Implements a configurable pipeline (default 5-stage: Fetch, Decode, Execute, Memory, Writeback) with adjustable stage latencies.
+-   **Hazard Detection and Resolution**: Detects and handles data hazards (RAW, WAR, WAW) and control hazards (branches, jumps) through stalling and forwarding mechanisms.
+-   **Data Forwarding**: Implements data forwarding paths to reduce stalls caused by data dependencies.
+-   **Cache Hierarchy**: Models a multi-level cache system (L1 instruction cache, L1 data cache, and optional L2 cache) with configurable parameters such as size, associativity, block size, replacement policies (LRU, FIFO, Random, LFU), write policies (write-through, write-back), and allocation policies (write-allocate, no-write-allocate). It also supports prefetching strategies.
+-   **Branch Prediction**: Incorporates advanced branch prediction techniques, including a 2-bit saturating counter for dynamic prediction and a Branch Target Buffer (BTB) for predicting branch targets.
+-   **Tomasulo's Algorithm (Out-of-Order Execution)**: A key feature enabling out-of-order execution. This implementation includes:
+    -   **Reservation Stations**: Buffers for holding instructions and their operands.
+    -   **Reorder Buffer (ROB)**: Ensures in-order commitment of instructions.
+    -   **Common Data Bus (CDB)**: Broadcasts results from functional units.
+    -   **Register Renaming**: Eliminates WAR and WAW hazards.
+-   **Superscalar Execution**: Can be configured to simulate a superscalar processor, allowing it to issue multiple independent instructions per cycle.
 
-- Models a 5-stage pipeline (Fetch, Decode, Execute, Memory, Writeback)
-- Detects and handles data, control, and structural hazards
-- Implements forwarding for performance optimization
-- Includes branch prediction for control hazard mitigation
-- Provides performance metrics and visualization
+### 4. Visualization and Debugging Tools
 
-Key files:
-- `simulator.rs` - Pipeline coordination and execution
-- `pipeline.rs` - Pipeline stage implementation
-- `components.rs` - Cache and other architectural components
-- `config.rs` - Configuration options for the simulator
-- `visualization.rs` - Pipeline state visualization
+The simulator provides extensive tools for understanding and debugging program execution:
 
-### Memory System
+-   **Cycle-by-Cycle Pipeline Visualization**: Displays the state of each pipeline stage, showing instruction flow, stalls, and flushes.
+-   **Cache Hierarchy Visualization**: Provides statistics on cache accesses, hits, misses, and hit rates for each level of the cache.
+-   **Register and Memory Dumps**: Allows inspection of the architectural state at any point during simulation.
+-   **Instruction Tracing**: Detailed logs of instruction fetch, decode, execute, and writeback stages.
+-   **Performance Statistics**: Calculates key metrics such as Instructions Per Cycle (IPC), branch misprediction rates, and functional unit utilization.
 
-The memory system models:
-
-- Main memory with configurable size
-- Instruction and data caches (L1)
-- Optional L2 unified cache
-- Cache hierarchies with various replacement policies
-
-### Assembler
-
-Located in `src/assembler/`, this component:
-
-- Parses MIPS assembly syntax
-- Converts assembly to machine code
-- Handles labels and pseudo-instructions
-- Generates executable binary files
-
-## Design Philosophy
-
-The VMIPS Simulator is designed with the following principles:
-
-1. **Accuracy** - Correctly models the behavior of MIPS instructions
-2. **Modularity** - Components are separated with clean interfaces
-3. **Extensibility** - Easy to add new instructions or features
-4. **Performance** - Efficient implementation for handling complex programs
-5. **Educational Value** - Clear visualization and metrics for learning
-
-## Memory Map
-
-The simulator uses the following memory map:
-
-- `0x00000000 - 0x00FFFFFF`: Text segment (Code)
-- `0x10000000 - 0x10FFFFFF`: Data segment
-- `0x7FFFFFFF - 0x7FFFFFFC`: Stack (grows downward)
-
-## Data Flow
-
-1. Program is loaded into memory
-2. Instructions are fetched sequentially (or according to control flow)
-3. Each instruction is decoded and executed
-4. Results are written back to registers or memory
-5. Performance statistics are collected and displayed
-
-## Future Extensions
-
-The architecture is designed to support future extensions including:
-
-- Out-of-order execution
-- More advanced branch prediction
-- Superscalar capabilities
-- Floating-point unit
-- Memory management unit (MMU)
+This modular and feature-rich architecture makes VMIPS Rust a powerful tool for both learning and research in computer architecture.

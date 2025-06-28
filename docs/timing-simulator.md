@@ -1,101 +1,112 @@
 # Timing Simulator
 
-The Timing Simulator models a pipelined MIPS processor architecture, providing detailed information about performance, hazards, and pipeline behavior.
+The Timing Simulator provides a detailed, cycle-accurate model of a MIPS processor, allowing for in-depth analysis of microarchitectural features, performance, and pipeline behavior.
 
 ## Overview
 
-Unlike the Functional Simulator which focuses solely on instruction execution, the Timing Simulator models the microarchitectural details:
+Unlike the [Functional Simulator](functional-simulator.md), the Timing Simulator delves into the microarchitectural details of a MIPS processor. It models:
 
-- 5-stage pipeline (Fetch, Decode, Execute, Memory, Writeback)
-- Hazard detection and handling
-- Data forwarding
-- Branch prediction
-- Memory hierarchy with caches
-- Performance analysis
+-   **Configurable Pipeline**: From a classic 5-stage in-order pipeline to advanced out-of-order execution with Tomasulo's algorithm.
+-   **Hazard Detection and Resolution**: Comprehensive handling of data, control, and structural hazards.
+-   **Data Forwarding**: Implements forwarding paths to minimize stalls due to data dependencies.
+-   **Advanced Branch Prediction**: Supports various prediction schemes, including 2-bit saturating counters and a Branch Target Buffer (BTB).
+-   **Multi-level Memory Hierarchy**: Models L1 instruction and data caches, and an optional L2 cache, with configurable parameters and policies.
+-   **Out-of-Order Execution (Tomasulo's Algorithm)**: A detailed implementation of Tomasulo's algorithm, including reservation stations, reorder buffer, and common data bus.
+-   **Superscalar Execution**: Ability to simulate multiple instruction issues per cycle.
+-   **Performance Analysis**: Collects and reports a wide array of performance metrics.
 
-This component is ideal for:
-- Understanding pipeline dynamics
-- Analyzing program performance
-- Studying hazards and their resolution
-- Exploring cache behavior
+This component is essential for:
+-   Understanding complex pipeline dynamics and microarchitectural interactions.
+-   Analyzing program performance under different hardware configurations.
+-   Studying the impact of hazards, caches, and branch prediction on execution speed.
+-   Researching and experimenting with advanced processor design concepts.
 
 ## Pipeline Architecture
 
-### Pipeline Stages
+### Configurable Pipeline Stages
 
-The Timing Simulator implements a classic 5-stage RISC pipeline:
+The Timing Simulator supports a flexible pipeline configuration. By default, it models a classic 5-stage RISC pipeline:
 
-1. **Fetch (IF)**: Fetches the instruction from memory
-2. **Decode (ID)**: Decodes the instruction and reads register operands
-3. **Execute (EX)**: Performs ALU operations and address calculations
-4. **Memory (MEM)**: Accesses data memory for loads and stores
-5. **Writeback (WB)**: Writes results back to the register file
+1.  **Fetch (IF)**: Fetches the instruction from the instruction cache.
+2.  **Decode (ID)**: Decodes the instruction, reads register operands, and detects hazards.
+3.  **Execute (EX)**: Performs ALU operations, address calculations, and handles branch outcomes.
+4.  **Memory (MEM)**: Accesses the data cache for load and store operations.
+5.  **Writeback (WB)**: Writes results back to the register file.
+
+Each stage's latency can be configured, allowing for simulation of different pipeline depths and complexities.
 
 ### Hazard Handling
 
-The simulator models three types of hazards:
+The simulator implements sophisticated mechanisms to detect and resolve pipeline hazards:
 
-1. **Data Hazards**: Occur when an instruction depends on the result of a previous instruction
-   - Handled through forwarding when possible
-   - Stalls when forwarding cannot resolve the hazard
+-   **Data Hazards (RAW, WAR, WAW)**: Occur when an instruction depends on the result of a previous instruction that has not yet completed. Handled primarily through:
+    -   **Data Forwarding**: Results are forwarded directly from producing stages to consuming stages, bypassing the register file.
+    -   **Stalling**: If forwarding is not possible (e.g., load-use hazard), the pipeline is stalled until the required data is available.
+-   **Control Hazards**: Arise from branch and jump instructions, which alter the program flow. Mitigated by:
+    -   **Branch Prediction**: The simulator predicts the outcome of branches to avoid stalling the pipeline.
+    -   **Pipeline Flushing**: If a branch prediction is incorrect, the misfetched instructions are flushed from the pipeline, incurring a misprediction penalty.
+-   **Structural Hazards**: Occur when multiple instructions attempt to use the same hardware resource simultaneously. Resolved by stalling one of the conflicting instructions.
 
-2. **Control Hazards**: Occur with branches and jumps
-   - Branch prediction to minimize stalls
-   - Pipeline flushing when prediction is incorrect
+### Advanced Branch Prediction
 
-3. **Structural Hazards**: Occur when multiple instructions compete for the same resource
-   - Stalling to resolve resource conflicts
+To minimize the impact of control hazards, the simulator includes several branch prediction schemes:
 
-### Branch Prediction
-
-The simulator includes configurable branch prediction:
-
-- Static prediction (always taken/not taken)
-- 1-bit dynamic prediction
-- 2-bit saturating counter prediction
-- Branch target buffer (BTB)
+-   **Static Prediction**: Simple prediction strategies (e.g., always taken, always not taken).
+-   **1-bit Dynamic Prediction**: Remembers the last outcome of a branch.
+-   **2-bit Saturating Counter**: A more accurate dynamic predictor that uses a 2-bit state machine to predict branch outcomes.
+-   **Branch Target Buffer (BTB)**: A cache that stores the predicted target addresses of recently executed branch instructions, enabling faster branch resolution.
 
 ### Memory Hierarchy
 
-The memory system models:
+VMIPS Rust features a detailed memory hierarchy simulation:
 
-- Separate L1 instruction and data caches
-- Optional unified L2 cache
-- Configurable cache parameters (size, associativity, block size)
-- Various replacement policies (LRU, FIFO, Random)
+-   **Separate L1 Caches**: Independent L1 instruction cache and L1 data cache.
+-   **Optional Unified L2 Cache**: An optional second-level cache that serves as a victim cache for L1 misses.
+-   **Configurable Cache Parameters**: Users can specify cache size, associativity (direct-mapped, set-associative), and block size.
+-   **Replacement Policies**: Supports LRU (Least Recently Used), FIFO (First-In, First-Out), Random, and LFU (Least Frequently Used).
+-   **Write Policies**: Includes Write-Through (writes to cache and main memory simultaneously) and Write-Back (writes only to cache, updates main memory on eviction).
+-   **Allocation Policies**: Supports Write-Allocate (block is brought into cache on a write miss) and No-Write-Allocate (writes directly to main memory on a write miss).
+-   **Prefetching**: Basic prefetching strategies can be enabled to reduce miss rates.
+
+## Advanced Microarchitectural Features
+
+### Out-of-Order Execution with Tomasulo's Algorithm
+
+For a deeper understanding of modern processor designs, the Timing Simulator includes a robust implementation of Tomasulo's algorithm, enabling out-of-order execution:
+
+-   **Reservation Stations**: Instructions are dispatched to available reservation stations, where they wait for their operands.
+-   **Register Renaming**: Eliminates false data dependencies (WAR and WAW hazards) by mapping architectural registers to a larger pool of physical registers.
+-   **Reorder Buffer (ROB)**: Instructions complete execution out of order but commit their results to the architectural state in program order, ensuring precise exceptions.
+-   **Common Data Bus (CDB)**: Results from functional units are broadcast on the CDB, allowing dependent instructions in reservation stations and the ROB to quickly acquire their operands.
+
+### Superscalar Execution
+
+The simulator can model superscalar processors, capable of issuing multiple instructions per cycle. The `superscalar_width` parameter allows you to configure how many instructions can be issued in parallel, demonstrating the benefits and challenges of instruction-level parallelism.
 
 ## Usage
 
 ### Running the Timing Simulator
 
+To run the timing simulator with an assembled MIPS binary:
+
 ```bash
-./target/release/vmips_rust timing [memory_size]
+cargo run --bin vmips_rust timing <binary_file> [options]
 ```
 
-Where `memory_size` is an optional parameter specifying the memory size in bytes (default: 8192).
-
-### Configuration Options
-
-The timing simulator can be configured through code or command-line parameters:
-
-- Pipeline configuration (stages, latencies)
-- Cache parameters (size, associativity, block size)
-- Branch prediction methods
-- Forwarding enable/disable
-- Visualization options
+Refer to the [Getting Started](getting-started.md) guide for a full list of command-line options, including those for configuring pipeline stages, cache parameters, and advanced features.
 
 ## Visualization
 
-The Timing Simulator includes visualization capabilities:
+The Timing Simulator offers powerful visualization capabilities to observe the internal workings of the processor:
 
-- Pipeline stage contents for each cycle
-- Hazard detection and resolution
-- Cache hit/miss patterns
-- Register and data forwarding
+-   **Cycle-by-Cycle Pipeline View**: Displays the instruction in each pipeline stage, along with its status (Busy, Stalled, Flushed).
+-   **Hazard Visualization**: Highlights active data and control hazards, showing where stalls or flushes occur.
+-   **Cache Hit/Miss Patterns**: Provides insights into cache performance by tracking hits and misses.
+-   **Register and Memory State**: Allows inspection of the architectural state at any point.
 
-Example visualization output:
+Example visualization output (text-based):
 
-```
+```text
 === Pipeline State at Cycle 5 ===
 +-------+-------+-------+-------+-------+
 | Fetch | Decode| Exec  | Mem   | Write |
@@ -110,17 +121,18 @@ Active Hazards:
 
 ## Performance Metrics
 
-The simulator collects and reports various performance metrics:
+The simulator collects and reports various performance metrics to help analyze the efficiency of the simulated processor configuration:
 
-- Cycles Per Instruction (CPI)
-- Pipeline stall cycles
-- Branch prediction accuracy
-- Cache hit/miss rates
-- Memory access latency
+-   **Cycles Per Instruction (CPI)**: Average number of clock cycles required to execute one instruction.
+-   **Pipeline Stall Cycles**: Breakdown of stalls due to data, control, and structural hazards.
+-   **Branch Prediction Accuracy**: Percentage of correctly predicted branches.
+-   **Cache Hit/Miss Rates**: For each level of the cache hierarchy.
+-   **Average Memory Access Time**: The average time taken to access memory, considering cache hits and misses.
+-   **Functional Unit Utilization**: For Tomasulo's algorithm, shows how busy each functional unit is.
 
-Example statistics:
+Example statistics output:
 
-```
+```text
 Pipeline Statistics:
   Total Instructions: 1024
   Total Cycles: 1253
@@ -140,65 +152,42 @@ Cache Statistics:
     Miss Rate: 7.3%
 ```
 
-## Advanced Features
-
-### Out-of-Order Execution
-
-The Timing Simulator can be configured to model out-of-order execution with Tomasulo's algorithm:
-
-- Reservation stations
-- Register renaming
-- Reorder buffer
-- Speculative execution
-
-### Superscalar Execution
-
-For advanced study, the simulator can model superscalar execution:
-
-- Multiple instructions per cycle
-- Multiple functional units
-- Instruction scheduling
-
 ## Example Usage Scenarios
 
 ### Pipeline Behavior Analysis
 
-```bash
-# Run with basic configuration
-./target/release/vmips_rust timing
+Run a program with different pipeline configurations (e.g., with/without forwarding) and observe the changes in CPI and stall cycles.
 
-# Examine pipeline visualization and stall patterns
+```bash
+cargo run --bin vmips_rust timing my_program.bin --no-forwarding
 ```
 
 ### Branch Prediction Study
 
+Experiment with different branch prediction algorithms and analyze their impact on misprediction rates and overall performance.
+
 ```bash
-# Edit config to try different branch predictors
-# Run the same program with each predictor
-# Compare branch misprediction rates
+cargo run --bin vmips_rust timing my_program.bin --branch-predictor TwoBit
 ```
 
 ### Cache Optimization
 
+Vary cache parameters (size, associativity, block size) and analyze the resulting hit/miss rates and average memory access times to find optimal configurations for specific workloads.
+
 ```bash
-# Vary cache parameters
-# Compare hit/miss rates for different configurations
-# Analyze impact on overall performance
+cargo run --bin vmips_rust timing my_program.bin --l1d-cache 8192 8 32
 ```
 
-## Limitations
+### Out-of-Order Execution Analysis
 
-The Timing Simulator has some limitations:
+Enable Tomasulo's algorithm and observe how instructions are reordered, how dependencies are resolved via the CDB, and the utilization of reservation stations and functional units.
 
-- Simplified memory model
-- Limited out-of-order capabilities
-- No speculation recovery mechanisms
-- No dynamic branch prediction adaptation
+```bash
+cargo run --bin vmips_rust timing my_program.bin --tomasulo
+```
 
 ## Next Steps
 
-After exploring the Timing Simulator, you might want to check out:
-
-- [Functional Simulator](functional-simulator.md) for simpler instruction execution
-- [Architecture Overview](architecture.md) for system design details
-- [Examples](examples.md) for sample programs to study pipeline behavior
+-   Explore the [Instruction Set](instruction-set.md) for a complete list of supported MIPS instructions.
+-   Refer to the [Architecture Overview](architecture.md) for a high-level understanding of the simulator's design.
+-   Check out the [Examples](examples.md) directory for sample MIPS programs designed to illustrate various architectural concepts.

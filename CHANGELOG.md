@@ -52,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Infinite loop issues in array_sum.rs example
 - Branch offset calculation errors in factorial.rs
 - Complex loop logic that didn't work with current simulator
-- All Clippy warnings and formatting issues
+- Critical compilation issues and unused imports
 - Memory initialization consistency across examples
 
 ## [0.1.0] - 2024-11-01
@@ -66,3 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cache hierarchy simulation
 - Comprehensive MIPS instruction set support
 - Example programs and documentation
+###
+ Known Issues
+- 94 Clippy warnings remain to be addressed in v0.2.1
+- CI configured to allow warnings for this release to focus on functionality

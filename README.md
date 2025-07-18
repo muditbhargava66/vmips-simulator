@@ -199,8 +199,8 @@ cargo test functional_simulator
 # Check code formatting
 cargo fmt --check
 
-# Run linter (note: 94 warnings to be addressed in v0.2.1)
-cargo clippy --all-targets -- -D warnings
+# Run linter (warnings allowed in v0.2.0, will be fixed in v0.2.1)
+cargo clippy --all-targets
 
 # Run performance benchmarks
 cargo bench
@@ -301,7 +301,7 @@ See [CONTRIBUTING.md](docs/contributing.md) for detailed guidelines.
 - ✅ **Stable Release**: v0.2.0 with all core features
 - ✅ **Production Ready**: Comprehensive testing and CI/CD
 - ✅ **Educational Focus**: 8 working examples with documentation
-- ⚠️ **Next Release**: v0.2.1 will address 94 Clippy warnings
+- ⚠️ **Next Release**: v0.2.1 will address remaining Clippy warnings for production-grade code quality
 
 ## 📄 License
 

@@ -1,5 +1,5 @@
 use proptest::prelude::*;
-use quickcheck::{quickcheck, TestResult};
+use quickcheck::TestResult;
 use vmips_rust::functional_simulator::instructions::Instruction;
 use vmips_rust::functional_simulator::memory::Memory;
 use vmips_rust::functional_simulator::registers::Registers;

@@ -111,7 +111,7 @@ fn test_load_store_edge_cases() {
     simulator.step();
 
     // Load from uninitialized memory (behavior may vary)
-    let loaded_value = simulator.registers.read(1);
+    let _loaded_value = simulator.registers.read(1);
     // Just verify the operation completed without crashing
 
     // Test store to boundary
@@ -122,7 +122,7 @@ fn test_load_store_edge_cases() {
     simulator.step();
 
     // Verify store worked (if within bounds)
-    let stored_value = simulator.memory.read_word(0x3FC);
+    let _stored_value = simulator.memory.read_word(0x3FC);
     // Just verify the operation completed
 }
 

@@ -221,7 +221,6 @@ impl ElfLoader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::functional_simulator::memory::Memory;
 
     #[test]
     fn test_elf_magic_validation() {

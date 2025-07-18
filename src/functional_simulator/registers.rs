@@ -1,4 +1,31 @@
+// Copyright (c) 2024 Mudit Bhargava
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+
 // registers.rs
+//
+// This file contains the implementation of the MIPS register file.
+// It defines the Registers struct, which manages the general-purpose and
+// floating-point registers, as well as the special-purpose HI, LO, and PC
+// registers.
+
 #[derive(Debug, Clone)]
 pub struct Registers {
     pub data: Vec<u32>,          // General-purpose registers
@@ -13,7 +40,7 @@ pub struct Registers {
 impl Registers {
     pub fn new() -> Self {
         Self {
-            data: vec![0; 32],   // 32 general purpose registers
+            data: vec![0; 32],           // 32 general purpose registers
             fp_registers: vec![0.0; 32], // 32 floating-point registers
             hi: 0,
             lo: 0,
@@ -73,7 +100,7 @@ impl Registers {
 
     pub fn dump_registers(&self) -> String {
         let mut result = String::new();
-        
+
         // General purpose registers
         result.push_str("General Purpose Registers:\n");
         for i in 0..8 {
@@ -118,13 +145,13 @@ impl Registers {
             }
             result.push('\n');
         }
-        
+
         // Special registers
         result.push_str(&format!("HI    = 0x{:08x}\n", self.hi));
         result.push_str(&format!("LO    = 0x{:08x}\n", self.lo));
         result.push_str(&format!("PC    = 0x{:08x}\n", self.pc));
         result.push_str(&format!("FCSR  = 0x{:08x}\n", self.fcsr));
-        
+
         // Floating-point registers (if enabled)
         result.push_str("\nFloating Point Registers:\n");
         for i in 0..8 {
@@ -135,7 +162,7 @@ impl Registers {
             }
             result.push('\n');
         }
-        
+
         result
     }
 }

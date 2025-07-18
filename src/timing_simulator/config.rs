@@ -1,16 +1,40 @@
+// Copyright (c) 2024 Mudit Bhargava
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+
 // config.rs
+//
+// This file contains the configuration structs for the timing simulator.
+// It defines the configuration for the pipeline, caches, and branch predictor.
 
 #[derive(Debug, Clone)]
 pub struct CacheConfig {
-    pub size: usize,                      // Cache size in bytes
-    pub associativity: usize,             // Number of ways (lines per set)
-    pub block_size: usize,                // Size of each cache line in bytes
+    pub size: usize,          // Cache size in bytes
+    pub associativity: usize, // Number of ways (lines per set)
+    pub block_size: usize,    // Size of each cache line in bytes
     pub replacement_policy: ReplacementPolicy,
-    pub hit_latency: usize,               // Cache hit latency in cycles
-    pub miss_penalty: usize,              // Additional latency on cache miss
-    pub write_back: bool,                 // true = write-back, false = write-through
-    pub write_allocate: bool,             // true = write-allocate, false = no-write-allocate
-    pub prefetch_enabled: bool,           // Whether prefetching is enabled
+    pub hit_latency: usize,     // Cache hit latency in cycles
+    pub miss_penalty: usize,    // Additional latency on cache miss
+    pub write_back: bool,       // true = write-back, false = write-through
+    pub write_allocate: bool,   // true = write-allocate, false = no-write-allocate
+    pub prefetch_enabled: bool, // Whether prefetching is enabled
     pub prefetch_strategy: PrefetchStrategy,
 }
 
@@ -20,8 +44,11 @@ impl CacheConfig {
         assert!(size > 0, "Cache size must be positive");
         assert!(associativity > 0, "Associativity must be positive");
         assert!(block_size > 0, "Block size must be positive");
-        assert!(size % (associativity * block_size) == 0, "Cache size must be divisible by (associativity * block_size)");
-        
+        assert!(
+            size % (associativity * block_size) == 0,
+            "Cache size must be divisible by (associativity * block_size)"
+        );
+
         Self {
             size,
             associativity,
@@ -47,10 +74,10 @@ pub enum ReplacementPolicy {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PrefetchStrategy {
-    NextNBlocks(usize),   // Prefetch the next N sequential blocks
-    AdjacentSets(usize),  // Prefetch blocks from N adjacent sets
-    Stride(isize),        // Prefetch with a specific stride pattern
-    Custom,               // Custom prefetch strategy
+    NextNBlocks(usize),  // Prefetch the next N sequential blocks
+    AdjacentSets(usize), // Prefetch blocks from N adjacent sets
+    Stride(isize),       // Prefetch with a specific stride pattern
+    Custom,              // Custom prefetch strategy
 }
 
 pub struct PipelineConfig {
@@ -68,7 +95,7 @@ impl PipelineConfig {
     pub fn new(num_stages: usize) -> Self {
         // Default to 1 cycle per stage
         let stage_latencies = vec![1; num_stages];
-        
+
         Self {
             num_stages,
             stage_latencies,
@@ -79,24 +106,32 @@ impl PipelineConfig {
             superscalar_width: 1,
         }
     }
-    
+
     pub fn with_latencies(mut self, latencies: Vec<usize>) -> Self {
-        assert_eq!(latencies.len(), self.num_stages, "Number of latencies must match number of stages");
+        assert_eq!(
+            latencies.len(),
+            self.num_stages,
+            "Number of latencies must match number of stages"
+        );
         self.stage_latencies = latencies;
         self
     }
-    
+
     pub fn with_forwarding(mut self, enabled: bool) -> Self {
         self.forwarding_enabled = enabled;
         self
     }
-    
-    pub fn with_branch_prediction(mut self, enabled: bool, predictor_type: BranchPredictorType) -> Self {
+
+    pub fn with_branch_prediction(
+        mut self,
+        enabled: bool,
+        predictor_type: BranchPredictorType,
+    ) -> Self {
         self.branch_prediction_enabled = enabled;
         self.branch_predictor_type = predictor_type;
         self
     }
-    
+
     /// Enable Tomasulo's Algorithm for out-of-order execution
     pub fn with_tomasulo(mut self, enabled: bool, config: TomasuloConfig) -> Self {
         if enabled {
@@ -106,7 +141,7 @@ impl PipelineConfig {
         }
         self
     }
-    
+
     pub fn with_superscalar(mut self, width: usize) -> Self {
         assert!(width > 0, "Superscalar width must be positive");
         self.superscalar_width = width;
@@ -116,11 +151,11 @@ impl PipelineConfig {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BranchPredictorType {
-    Static,       // Always predict taken or not taken
-    OneBit,       // Remember last outcome
-    TwoBit,       // 2-bit saturating counter
-    Correlating,  // Use history of recent branches
-    Tournament,   // Combine multiple predictors
+    Static,      // Always predict taken or not taken
+    OneBit,      // Remember last outcome
+    TwoBit,      // 2-bit saturating counter
+    Correlating, // Use history of recent branches
+    Tournament,  // Combine multiple predictors
 }
 
 /// Configuration for Tomasulo's algorithm
@@ -154,42 +189,42 @@ impl TomasuloConfig {
             issue_width: 2,
         }
     }
-    
+
     pub fn with_reservation_stations(mut self, num: usize) -> Self {
         self.num_reservation_stations = num;
         self
     }
-    
+
     pub fn with_rob_size(mut self, size: usize) -> Self {
         self.rob_size = size;
         self
     }
-    
+
     pub fn with_alu_units(mut self, num: usize) -> Self {
         self.num_alu_units = num;
         self
     }
-    
+
     pub fn with_fpu_units(mut self, num: usize) -> Self {
         self.num_fpu_units = num;
         self
     }
-    
+
     pub fn with_load_store_units(mut self, num: usize) -> Self {
         self.num_load_store_units = num;
         self
     }
-    
+
     pub fn with_branch_units(mut self, num: usize) -> Self {
         self.num_branch_units = num;
         self
     }
-    
+
     pub fn with_commit_width(mut self, width: usize) -> Self {
         self.commit_width = width;
         self
     }
-    
+
     pub fn with_issue_width(mut self, width: usize) -> Self {
         self.issue_width = width;
         self
@@ -220,37 +255,37 @@ impl SimulatorConfig {
             statistics_enabled: true,
         }
     }
-    
+
     pub fn with_pipeline(mut self, pipeline_config: PipelineConfig) -> Self {
         self.pipeline_config = pipeline_config;
         self
     }
-    
+
     pub fn with_l1_cache(mut self, cache_config: CacheConfig) -> Self {
         self.l1_cache_config = cache_config;
         self
     }
-    
+
     pub fn with_l2_cache(mut self, cache_config: CacheConfig) -> Self {
         self.l2_cache_config = Some(cache_config);
         self
     }
-    
+
     pub fn with_max_instructions(mut self, max_instructions: usize) -> Self {
         self.max_instructions = max_instructions;
         self
     }
-    
+
     pub fn with_debug(mut self, enabled: bool) -> Self {
         self.debug_enabled = enabled;
         self
     }
-    
+
     pub fn with_trace(mut self, enabled: bool) -> Self {
         self.trace_enabled = enabled;
         self
     }
-    
+
     pub fn with_statistics(mut self, enabled: bool) -> Self {
         self.statistics_enabled = enabled;
         self

@@ -1,105 +1,97 @@
 // examples/dot_product.rs
+//
+// This example demonstrates computing the dot product of two vectors
+// using the VMIPS functional simulator. The dot product of vectors
+// A = [1, 2, 3] and B = [4, 5, 6] is calculated as:
+// A·B = (1×4) + (2×5) + (3×6) = 4 + 10 + 18 = 32
 
 use vmips_rust::functional_simulator::simulator::Simulator;
 
-// This function is used to validate our simulator implementation
-fn dot_product(a: Vec<i32>, b: Vec<i32>) -> i32 {
-    let mut result = 0;
-    for (a_val, b_val) in a.iter().zip(b.iter()) {
-        result += a_val * b_val;
-    }
-    result
-}
-
 fn main() {
+    println!("=== VMIPS Dot Product Example ===\n");
+
     let memory_size = 8192;
     let mut simulator = Simulator::new(memory_size);
 
-    // Load the vectors into memory
-    // Using values to match the native calculation: 2*3 + 4*5 = 26
-    simulator.memory.write_word(0x1000, 2); // Vector A[0]
-    simulator.memory.write_word(0x1004, 4); // Vector A[1]
-    simulator.memory.write_word(0x1008, 3); // Vector B[0]
-    simulator.memory.write_word(0x100C, 5); // Vector B[1]
+    // Initialize vectors in memory
+    // Vector A: [1, 2, 3] at address 0x1000
+    simulator.memory.write_word_init(0x1000, 1);
+    simulator.memory.write_word_init(0x1004, 2);
+    simulator.memory.write_word_init(0x1008, 3);
 
-    // Simplified dot product program - calculate 2*3 + 4*5 = 6 + 20 = 26
-    let program = vec![
-        // Initialize registers
-        0x00001020u32, // add $2, $0, $0      - initialize result register to 0
-        
-        // Load first pair and multiply
-        0x8C061000u32, // lw $6, 0x1000($0)   - load value 2 from A[0]
-        0x8C071008u32, // lw $7, 0x1008($0)   - load value 3 from B[0]
-        0x00C70018u32, // mult $6, $7         - multiply 2*3=6
-        0x00001012u32, // mflo $2             - move result to $2
-        0x00401820u32, // add $3, $2, $0      - save first result to $3
-        
-        // Load second pair and multiply
-        0x8C061004u32, // lw $6, 0x1004($0)   - load value 4 from A[1]
-        0x8C07100Cu32, // lw $7, 0x100C($0)   - load value 5 from B[1]
-        0x00C70018u32, // mult $6, $7         - multiply 4*5=20
-        0x00001012u32, // mflo $2             - move result to $2
-        
-        // Add the two products
-        0x00621020u32, // add $2, $3, $2      - add 6 + 20 = 26
-        
-        // Store the final result
-        0xAC021010u32, // sw $2, 0x1010($0)   - store result at 0x1010
+    // Vector B: [4, 5, 6] at address 0x1100
+    simulator.memory.write_word_init(0x1100, 4);
+    simulator.memory.write_word_init(0x1104, 5);
+    simulator.memory.write_word_init(0x1108, 6);
+
+    println!("Vector A: [1, 2, 3]");
+    println!("Vector B: [4, 5, 6]");
+    println!("Expected dot product: 1×4 + 2×5 + 3×6 = 4 + 10 + 18 = 32\n");
+
+    // Dot product calculation program
+    let instructions = vec![
+        // Initialize result accumulator
+        0x24020000u32, // addiu $2, $0, 0       # $2 = 0 (result accumulator)
+        // Calculate first term: A[0] × B[0] = 1 × 4 = 4
+        0x8C031000u32, // lw $3, 0x1000($0)     # $3 = A[0] = 1
+        0x8C041100u32, // lw $4, 0x1100($0)     # $4 = B[0] = 4
+        0x00640018u32, // mult $3, $4           # LO = 1 × 4 = 4
+        0x00002812u32, // mflo $5               # $5 = 4
+        0x00451020u32, // add $2, $2, $5        # $2 = 0 + 4 = 4
+        // Calculate second term: A[1] × B[1] = 2 × 5 = 10
+        0x8C031004u32, // lw $3, 0x1004($0)     # $3 = A[1] = 2
+        0x8C041104u32, // lw $4, 0x1104($0)     # $4 = B[1] = 5
+        0x00640018u32, // mult $3, $4           # LO = 2 × 5 = 10
+        0x00002812u32, // mflo $5               # $5 = 10
+        0x00451020u32, // add $2, $2, $5        # $2 = 4 + 10 = 14
+        // Calculate third term: A[2] × B[2] = 3 × 6 = 18
+        0x8C031008u32, // lw $3, 0x1008($0)     # $3 = A[2] = 3
+        0x8C041108u32, // lw $4, 0x1108($0)     # $4 = B[2] = 6
+        0x00640018u32, // mult $3, $4           # LO = 3 × 6 = 18
+        0x00002812u32, // mflo $5               # $5 = 18
+        0x00451020u32, // add $2, $2, $5        # $2 = 14 + 18 = 32
+        // Store result in memory
+        0xAC021200u32, // sw $2, 0x1200($0)     # Store result at 0x1200
+        // End program
+        0x00000000u32, // nop
     ];
 
-    let program_bytes = unsafe {
-        std::slice::from_raw_parts(
-            program.as_ptr() as *const u8,
-            program.len() * std::mem::size_of::<u32>(),
-        )
-    };
-    
-    println!("Loading program and preparing memory...");
-    simulator.load_program(program_bytes);
-    
-    // Re-load the test values after loading the program
-    // This ensures they aren't overwritten by the program bytes
-    simulator.memory.write_word(0x1000, 2); // Vector A[0]
-    simulator.memory.write_word(0x1004, 4); // Vector A[1]
-    simulator.memory.write_word(0x1008, 3); // Vector B[0]
-    simulator.memory.write_word(0x100C, 5); // Vector B[1]
-    
-    println!("Vector A: [2, 4], Vector B: [3, 5]");
-    
-    // Print values for verification
-    println!("Memory at 0x1000: {:?} (A[0])", simulator.memory.read_word(0x1000));
-    println!("Memory at 0x1004: {:?} (A[1])", simulator.memory.read_word(0x1004));
-    println!("Memory at 0x1008: {:?} (B[0])", simulator.memory.read_word(0x1008));
-    println!("Memory at 0x100C: {:?} (B[1])", simulator.memory.read_word(0x100C));
+    // Load instructions into memory
+    for (i, &instruction) in instructions.iter().enumerate() {
+        simulator.memory.write_word_init(i * 4, instruction);
+    }
 
+    println!("Running dot product calculation...");
     simulator.run();
 
-    // Retrieve the dot product result from memory
-    let dot_product_address = 0x1010;
-    match simulator.memory.read_word(dot_product_address) {
-        Some(dot_product_result) => {
-            println!("Dot Product Result: {}", dot_product_result);
+    // Get the result
+    let result = simulator.memory.read_word(0x1200).unwrap_or(0);
 
-            // Verify with the native function
-            let a = vec![2, 4];
-            let b = vec![3, 5];
-            let expected = dot_product(a, b);
-            println!("Expected Result: {}", expected);
+    println!("\nDot product result: {}", result);
 
-            if dot_product_result as i32 == expected {
-                println!("✓ Simulator result matches expected result!");
-            } else {
-                println!("✗ Results don't match. Simulator might have an issue.");
+    // Verify the result
+    let expected = 1 * 4 + 2 * 5 + 3 * 6;
+    println!("Expected result: {}", expected);
 
-                // Print register values for debugging
-                println!("Final register values:");
-                for i in 1..8 {
-                    println!("${}: {}", i, simulator.registers.read(i));
-                }
-            }
-        },
-        None => {
-            println!("Failed to retrieve the dot product result from memory.");
-        },
+    if result == expected {
+        println!("✓ Dot product calculation successful!");
+    } else {
+        println!(
+            "✗ Calculation failed. Expected {}, got {}",
+            expected, result
+        );
+
+        // Debug information
+        println!("\nDebug - Final register values:");
+        println!("$2 (result): {}", simulator.registers.read(2));
+        println!("$3 (last A value): {}", simulator.registers.read(3));
+        println!("$4 (last B value): {}", simulator.registers.read(4));
+        println!("$5 (last product): {}", simulator.registers.read(5));
     }
+
+    println!("\nThis example demonstrates:");
+    println!("- Loading data from memory");
+    println!("- Multiplication using MULT/MFLO instructions");
+    println!("- Accumulating results");
+    println!("- Storing final results back to memory");
 }

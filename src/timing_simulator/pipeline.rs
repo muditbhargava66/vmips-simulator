@@ -1,4 +1,29 @@
+// Copyright (c) 2024 Mudit Bhargava
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+
 // pipeline.rs
+//
+// This file contains the implementation of the MIPS in-order pipeline.
+// It defines the pipeline stages, hazard detection logic, and forwarding paths.
+
 use super::components::CacheHierarchy;
 use crate::functional_simulator::instructions::Instruction;
 use crate::functional_simulator::memory::Memory;
@@ -39,9 +64,9 @@ pub enum ForwardingPath {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum HazardType {
     None,
-    RAW,  // Read After Write
-    WAR,  // Write After Read
-    WAW,  // Write After Write
+    RAW, // Read After Write
+    WAR, // Write After Read
+    WAW, // Write After Write
     Control,
     Structural,
 }
@@ -101,7 +126,9 @@ impl PipelineStage {
         self.cycles_remaining = self.latency;
 
         // For execute and memory stages, determine target register
-        if self.stage_type == PipelineStageType::Execute || self.stage_type == PipelineStageType::Memory {
+        if self.stage_type == PipelineStageType::Execute
+            || self.stage_type == PipelineStageType::Memory
+        {
             if let Some(ref instr) = self.instruction {
                 self.target_register = instr.get_destination_register();
             }
@@ -173,9 +200,9 @@ impl Pipeline {
         // Create a cache hierarchy with L1 instruction and data caches
         let cache_hierarchy = CacheHierarchy::new(
             memory,
-            data_cache_config,     // L1 data cache config
-            instr_cache_config,   // L1 instruction cache config
-            None                  // No L2 cache for now
+            data_cache_config,  // L1 data cache config
+            instr_cache_config, // L1 instruction cache config
+            None,               // No L2 cache for now
         );
 
         // Initialize hazard statistics
@@ -210,47 +237,49 @@ impl Pipeline {
 
     pub fn execute(&mut self, instruction: &Instruction, _registers: &Registers, pc: u32) -> usize {
         self.instruction_count += 1;
-        
+
         // Track how many cycles it takes to execute this instruction
         let start_cycle = self.cycle_count;
-        
+
         // Insert instruction into fetch stage
         self.stages[0].start_instruction(instruction.clone(), pc);
-        
+
         // Run the pipeline until this instruction completes
         let mut completed = false;
         let mut cycles = 0;
-        
-        while !completed && cycles < 100 { // Limit to prevent infinite loops
+
+        while !completed && cycles < 100 {
+            // Limit to prevent infinite loops
             self.tick();
             cycles += 1;
-            
+
             // Check if the instruction has reached Writeback stage and completed
-            if self.stages.last().unwrap().instruction.is_some() && 
-               self.stages.last().unwrap().is_ready() {
+            if self.stages.last().unwrap().instruction.is_some()
+                && self.stages.last().unwrap().is_ready()
+            {
                 completed = true;
             }
         }
-        
+
         let total_cycles = self.cycle_count - start_cycle;
         total_cycles
     }
 
     pub fn tick(&mut self) {
         self.cycle_count += 1;
-        
+
         // First, handle stalls
         if self.stall_cycles > 0 {
             self.stall_cycles -= 1;
             self.stall_count += 1;
             return;
         }
-        
+
         // Process each stage in reverse order (to prevent data loss)
         for i in (0..self.stages.len()).rev() {
             self.stages[i].tick();
         }
-        
+
         // Check for hazards
         let hazards = self.detect_hazards();
         if !hazards.is_empty() {
@@ -264,32 +293,32 @@ impl Pipeline {
 
     fn detect_hazards(&self) -> Vec<(HazardType, usize)> {
         let mut hazards = Vec::new();
-        
+
         // Check for data hazards
         for i in 0..self.stages.len() - 1 {
             let current_stage = &self.stages[i];
             if current_stage.status != PipelineStageStatus::Busy {
                 continue;
             }
-            
+
             if let Some(ref current_instr) = current_stage.instruction {
                 // Get source registers for this instruction
                 let source_regs = current_instr.get_source_registers();
-                
+
                 // Check if any of the source registers are being written by later stages
                 for j in i + 1..self.stages.len() {
                     let later_stage = &self.stages[j];
                     if later_stage.status != PipelineStageStatus::Busy {
                         continue;
                     }
-                    
+
                     if let Some(target_reg) = later_stage.target_register {
                         if source_regs.contains(&target_reg) {
                             // RAW hazard
                             hazards.push((HazardType::RAW, i));
                         }
                     }
-                    
+
                     // Check for WAR and WAW hazards
                     if let Some(current_target_reg) = current_stage.target_register {
                         if let Some(ref later_instr) = later_stage.instruction {
@@ -298,7 +327,7 @@ impl Pipeline {
                                 // WAR hazard
                                 hazards.push((HazardType::WAR, i));
                             }
-                            
+
                             if let Some(later_target_reg) = later_stage.target_register {
                                 if later_target_reg == current_target_reg {
                                     // WAW hazard
@@ -310,7 +339,7 @@ impl Pipeline {
                 }
             }
         }
-        
+
         // Check for control hazards
         for i in 0..self.stages.len() {
             let stage = &self.stages[i];
@@ -322,7 +351,7 @@ impl Pipeline {
                 }
             }
         }
-        
+
         // Check for structural hazards (e.g., multiple memory accesses)
         let mut memory_stages = Vec::new();
         for i in 0..self.stages.len() {
@@ -335,12 +364,12 @@ impl Pipeline {
                 }
             }
         }
-        
+
         if memory_stages.len() > 1 {
             // Multiple memory accesses at the same time
             hazards.push((HazardType::Structural, memory_stages[0]));
         }
-        
+
         hazards
     }
 
@@ -356,11 +385,11 @@ impl Pipeline {
                             continue;
                         }
                     }
-                    
+
                     // Forwarding failed or disabled, need to stall
                     self.stall_pipeline(stage_idx);
                     self.data_hazard_stalls += 1;
-                    
+
                     // Update hazard statistics
                     for i in 0..self.hazard_stats.len() {
                         if self.hazard_stats[i].0 == HazardType::RAW {
@@ -373,7 +402,7 @@ impl Pipeline {
                     // Stall the pipeline
                     self.stall_pipeline(stage_idx);
                     self.data_hazard_stalls += 1;
-                    
+
                     // Update hazard statistics
                     for i in 0..self.hazard_stats.len() {
                         if self.hazard_stats[i].0 == hazard_type {
@@ -385,14 +414,14 @@ impl Pipeline {
                 HazardType::Control => {
                     // Handle branch hazard
                     let branch_taken = self.predict_branch(stage_idx);
-                    
+
                     if branch_taken {
                         // Flush earlier pipeline stages
                         self.flush_pipeline(0, stage_idx);
                     }
-                    
+
                     self.control_hazard_stalls += 1;
-                    
+
                     // Update hazard statistics
                     for i in 0..self.hazard_stats.len() {
                         if self.hazard_stats[i].0 == HazardType::Control {
@@ -405,7 +434,7 @@ impl Pipeline {
                     // Stall the pipeline
                     self.stall_pipeline(stage_idx);
                     self.structural_hazard_stalls += 1;
-                    
+
                     // Update hazard statistics
                     for i in 0..self.hazard_stats.len() {
                         if self.hazard_stats[i].0 == HazardType::Structural {
@@ -414,7 +443,7 @@ impl Pipeline {
                         }
                     }
                 },
-                _ => {}
+                _ => {},
             }
         }
     }
@@ -423,25 +452,27 @@ impl Pipeline {
         // Move instructions from one stage to the next
         for i in (1..self.stages.len()).rev() {
             let prev_idx = i - 1;
-            
-            if self.stages[prev_idx].is_ready() && self.stages[i].status == PipelineStageStatus::Empty {
+
+            if self.stages[prev_idx].is_ready()
+                && self.stages[i].status == PipelineStageStatus::Empty
+            {
                 // Transfer instruction to next stage
                 let instr = self.stages[prev_idx].instruction.clone();
                 let pc = self.stages[prev_idx].pc;
                 let data = self.stages[prev_idx].data;
                 let target_reg = self.stages[prev_idx].target_register;
                 let memory_addr = self.stages[prev_idx].memory_address;
-                
+
                 self.stages[i].start_instruction(instr.unwrap(), pc);
                 self.stages[i].data = data;
                 self.stages[i].target_register = target_reg;
                 self.stages[i].memory_address = memory_addr;
-                
+
                 // Reset previous stage
                 self.stages[prev_idx].reset();
             }
         }
-        
+
         // Fetch new instruction
         if self.stages[0].status == PipelineStageStatus::Empty {
             // In a real implementation, this would fetch from memory
@@ -453,20 +484,20 @@ impl Pipeline {
         if stage_idx >= self.stages.len() {
             return false;
         }
-        
+
         let current_stage = &self.stages[stage_idx];
-        
+
         if let Some(ref instr) = current_stage.instruction {
             let source_regs = instr.get_source_registers();
-            
+
             // Check if any later stage has the data we need
             for i in stage_idx + 1..self.stages.len() {
                 let later_stage = &self.stages[i];
-                
+
                 if later_stage.status != PipelineStageStatus::Busy || later_stage.data.is_none() {
                     continue;
                 }
-                
+
                 if let Some(target_reg) = later_stage.target_register {
                     if source_regs.contains(&target_reg) {
                         // We can forward the data!
@@ -475,7 +506,7 @@ impl Pipeline {
                 }
             }
         }
-        
+
         false
     }
 
@@ -484,7 +515,7 @@ impl Pipeline {
         for i in 0..=from_stage {
             self.stages[i].stall();
         }
-        
+
         self.stall_cycles += 1;
     }
 
@@ -497,12 +528,12 @@ impl Pipeline {
 
     fn predict_branch(&mut self, stage_idx: usize) -> bool {
         let stage = &self.stages[stage_idx];
-        
+
         if let Some(ref instr) = stage.instruction {
             if instr.is_branch_or_jump() {
                 // Use branch predictor to predict if branch is taken
                 let prediction = self.branch_predictor.predict(stage.pc);
-                
+
                 // If we predict taken, we also need a predicted target address
                 if prediction {
                     if let Some(_target) = self.branch_predictor.get_target(stage.pc) {
@@ -514,11 +545,11 @@ impl Pipeline {
                         return true;
                     }
                 }
-                
+
                 return prediction;
             }
         }
-        
+
         false
     }
 
@@ -530,7 +561,9 @@ impl Pipeline {
 
     pub fn is_register_being_written(&self, reg_num: u32) -> bool {
         for stage in &self.stages {
-            if stage.status == PipelineStageStatus::Busy || stage.status == PipelineStageStatus::Stalled {
+            if stage.status == PipelineStageStatus::Busy
+                || stage.status == PipelineStageStatus::Stalled
+            {
                 if let Some(target_reg) = stage.target_register {
                     if target_reg == reg_num {
                         return true;
@@ -543,40 +576,64 @@ impl Pipeline {
 
     pub fn print_statistics(&self) -> String {
         let mut stats = String::new();
-        
+
         stats.push_str(&format!("Pipeline Statistics:\n"));
-        stats.push_str(&format!("  Total Instructions: {}\n", self.instruction_count));
+        stats.push_str(&format!(
+            "  Total Instructions: {}\n",
+            self.instruction_count
+        ));
         stats.push_str(&format!("  Total Cycles: {}\n", self.cycle_count));
-        
+
         if self.instruction_count > 0 {
             let cpi = self.cycle_count as f32 / self.instruction_count as f32;
             stats.push_str(&format!("  Cycles Per Instruction (CPI): {:.2}\n", cpi));
         }
-        
+
         stats.push_str(&format!("  Total Stalls: {}\n", self.stall_count));
-        stats.push_str(&format!("    Data Hazard Stalls: {}\n", self.data_hazard_stalls));
-        stats.push_str(&format!("    Control Hazard Stalls: {}\n", self.control_hazard_stalls));
-        stats.push_str(&format!("    Structural Hazard Stalls: {}\n", self.structural_hazard_stalls));
-        stats.push_str(&format!("    Cache Miss Stalls: {}\n", self.cache_miss_stalls));
-        
-        stats.push_str(&format!("  Branch Mispredictions: {}\n", self.branch_mispredictions));
-        
+        stats.push_str(&format!(
+            "    Data Hazard Stalls: {}\n",
+            self.data_hazard_stalls
+        ));
+        stats.push_str(&format!(
+            "    Control Hazard Stalls: {}\n",
+            self.control_hazard_stalls
+        ));
+        stats.push_str(&format!(
+            "    Structural Hazard Stalls: {}\n",
+            self.structural_hazard_stalls
+        ));
+        stats.push_str(&format!(
+            "    Cache Miss Stalls: {}\n",
+            self.cache_miss_stalls
+        ));
+
+        stats.push_str(&format!(
+            "  Branch Mispredictions: {}\n",
+            self.branch_mispredictions
+        ));
+
         if self.forwarding_enabled {
-            stats.push_str(&format!("  Forwarding Used: {} times\n", self.forwarding_used));
+            stats.push_str(&format!(
+                "  Forwarding Used: {} times\n",
+                self.forwarding_used
+            ));
         }
-        
-        stats.push_str(&format!("  Register File Accesses: {}\n", self.register_file_accesses));
+
+        stats.push_str(&format!(
+            "  Register File Accesses: {}\n",
+            self.register_file_accesses
+        ));
         stats.push_str(&format!("  Memory Accesses: {}\n", self.memory_accesses));
-        
+
         stats.push_str(&format!("\nHazard Statistics:\n"));
         for &(hazard_type, count) in &self.hazard_stats {
             stats.push_str(&format!("  {:?}: {}\n", hazard_type, count));
         }
-        
+
         // Add cache hierarchy statistics
         stats.push_str("\n");
         stats.push_str(&self.cache_hierarchy.print_stats());
-        
+
         stats
     }
 

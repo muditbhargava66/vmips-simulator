@@ -1,58 +1,79 @@
 # Example MIPS Programs
 
-This directory (`examples/`) contains several example MIPS assembly programs that demonstrate various features of the VMIPS Simulator, including basic arithmetic, array manipulation, and algorithm implementations. These examples can be used to test the functional and timing simulators, and to understand how different MIPS instructions and architectural features behave.
+This directory (`examples/`) contains several example MIPS programs implemented as Rust executables that demonstrate various features of the VMIPS Simulator. These examples showcase basic arithmetic, array manipulation, and algorithm implementations using the simulator's API directly.
 
 ## Running Examples
 
-To run any of the example programs, you first need to assemble them into a binary format using the `main_assembler` tool, and then execute the binary with either the functional or timing simulator.
+All examples are implemented as Rust programs that use the VMIPS simulator library. You can run them directly using Cargo:
 
-### General Steps:
+```bash
+cargo run --example [example_name]
+```
 
-1.  **Assemble the example program**: Replace `[example_name].s` with the actual assembly file (e.g., `bubble_sort.s`).
-    ```bash
-    cargo run --bin main_assembler assemble examples/[example_name].s [output_name].bin
-    ```
-    Example:
-    ```bash
-    cargo run --bin main_assembler assemble examples/bubble_sort.s bubble_sort.bin
-    ```
-
-2.  **Run the assembled binary**: Choose either the `functional` or `timing` simulator.
-    ```bash
-    cargo run --bin vmips_rust functional [output_name].bin
-    # OR
-    cargo run --bin vmips_rust timing [output_name].bin
-    ```
-    Example:
-    ```bash
-    cargo run --bin vmips_rust functional bubble_sort.bin
-    ```
+For example:
+```bash
+cargo run --example bubble_sort
+cargo run --example dot_product
+cargo run --example factorial
+```
 
 ## Available Examples
 
-### `bubble_sort.s`
+### `bubble_sort.rs`
 
--   **Description**: Implements the Bubble Sort algorithm to sort an array of integers in ascending order. This example demonstrates array manipulation, loops, and conditional branching.
--   **Location**: `examples/bubble_sort.s`
--   **Concepts Demonstrated**: Loops, conditional branches, memory access (loads and stores), array indexing.
+-   **Description**: Demonstrates a single pass of the Bubble Sort algorithm on an array [5, 2, 8, 1, 9]. Shows how the largest element moves to the end.
+-   **Location**: `examples/bubble_sort.rs`
+-   **Concepts Demonstrated**: Array traversal, conditional swapping, memory load/store operations, comparison instructions.
+-   **Expected Output**: Array after one pass with largest element (9) at the end.
 
-### `dot_product.s`
+### `dot_product.rs`
 
--   **Description**: Calculates the dot product of two vectors. This example showcases basic arithmetic operations and iterative processing of data structures.
--   **Location**: `examples/dot_product.s`
--   **Concepts Demonstrated**: Loops, multiplication, addition, memory access.
+-   **Description**: Calculates the dot product of two vectors A = [1, 2, 3] and B = [4, 5, 6], resulting in 32.
+-   **Location**: `examples/dot_product.rs`
+-   **Concepts Demonstrated**: Vector operations, multiplication using MULT/MFLO, accumulation patterns, memory addressing.
+-   **Expected Output**: Dot product result of 32.
 
-### `factorial.s`
+### `factorial.rs`
 
--   **Description**: Computes the factorial of a given non-negative integer using an iterative approach. Useful for understanding basic arithmetic and loop structures.
--   **Location**: `examples/factorial.s`
--   **Concepts Demonstrated**: Loops, multiplication, basic integer operations.
+-   **Description**: Computes 6! = 720 using step-by-step multiplication (6 × 5 × 4 × 3 × 2 × 1).
+-   **Location**: `examples/factorial.rs`
+-   **Concepts Demonstrated**: Sequential multiplication, MULT/MFLO instruction usage, iterative calculations.
+-   **Expected Output**: Factorial result of 720.
 
-### `matrix_multiply.s`
+### `matrix_multiply.rs`
 
--   **Description**: Implements matrix multiplication for two small matrices. This is a more complex example demonstrating nested loops, multi-dimensional array access, and extensive arithmetic operations.
--   **Location**: `examples/matrix_multiply.s`
--   **Concepts Demonstrated**: Nested loops, complex memory addressing, multiplication, addition.
+-   **Description**: Multiplies two 2×2 matrices: [[1,2],[3,4]] × [[5,6],[7,8]] = [[19,22],[43,50]].
+-   **Location**: `examples/matrix_multiply.rs`
+-   **Concepts Demonstrated**: Matrix operations, nested calculations, multiple memory accesses, complex arithmetic.
+-   **Expected Output**: Resulting 2×2 matrix with correct values.
+
+### `simple_calculator.rs`
+
+-   **Description**: Performs complex arithmetic: (15 + 25) × 3 - 10 ÷ 2 = 115, demonstrating order of operations.
+-   **Location**: `examples/simple_calculator.rs`
+-   **Concepts Demonstrated**: Multiple arithmetic operations, division using DIV/MFLO, order of operations, intermediate result storage.
+-   **Expected Output**: Final calculation result of 115.
+
+### `fibonacci.rs`
+
+-   **Description**: Calculates the 10th Fibonacci number (F(10) = 55) using step-by-step computation.
+-   **Location**: `examples/fibonacci.rs`
+-   **Concepts Demonstrated**: Sequential calculations, mathematical sequences, iterative algorithms.
+-   **Expected Output**: 10th Fibonacci number (55).
+
+### `array_sum.rs`
+
+-   **Description**: Sums an array of integers [10, 20, 30, 40, 50] to get 150.
+-   **Location**: `examples/array_sum.rs`
+-   **Concepts Demonstrated**: Array processing, accumulation, sequential memory access, addition operations.
+-   **Expected Output**: Sum of array elements (150).
+
+### `string_length.rs`
+
+-   **Description**: Counts characters in the null-terminated string "HELLO" to get length 5.
+-   **Location**: `examples/string_length.rs`
+-   **Concepts Demonstrated**: String processing, null termination, character counting, conditional termination.
+-   **Expected Output**: String length of 5.
 
 ## Studying Performance with Examples
 

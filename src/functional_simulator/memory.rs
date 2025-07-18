@@ -1,12 +1,61 @@
+// Copyright (c) 2024 Mudit Bhargava
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+
 // memory.rs
+//
+// This file contains the memory implementation for the MIPS simulator.
+// It defines the Memory struct, which manages the simulated memory space,
+// including memory-mapped devices and memory regions with different
+// access permissions.
+
 use std::collections::HashMap;
 
+/// Configuration options for memory behavior
+#[derive(Clone, Copy, Debug)]
+pub struct MemoryConfig {
+    pub strict_alignment: bool,   // Enforce strict alignment checks
+    pub verbose_errors: bool,     // Print detailed error messages
+    pub enable_permissions: bool, // Enable memory region permissions
+    pub enable_translation: bool, // Enable virtual address translation
+}
+
+impl Default for MemoryConfig {
+    fn default() -> Self {
+        Self {
+            strict_alignment: false,  // Allow unaligned access for compatibility
+            verbose_errors: false,    // Reduce noise in tests
+            enable_permissions: true, // Enable permissions by default
+            enable_translation: true, // Enable translation by default
+        }
+    }
+}
+
+/// Advanced memory implementation with virtual address translation and memory regions
 pub struct Memory {
     pub data: Vec<u8>,
     pub size: usize,
     heap_top: usize,
     memory_regions: Vec<MemoryRegion>,
     mapped_devices: HashMap<usize, Box<dyn MemoryMappedDevice>>,
+    config: MemoryConfig,
 }
 
 impl Clone for Memory {
@@ -17,6 +66,7 @@ impl Clone for Memory {
             heap_top: self.heap_top,
             memory_regions: self.memory_regions.clone(),
             mapped_devices: HashMap::new(), // Empty on clone
+            config: self.config,
         }
     }
 }
@@ -30,84 +80,135 @@ pub trait MemoryMappedDevice: Send + Sync {
 }
 
 // Define memory regions with different access permissions
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MemoryRegion {
     pub start: usize,
     pub end: usize,
     pub readable: bool,
     pub writable: bool,
     pub executable: bool,
+    pub priority: u8, // Higher priority regions are checked first
 }
 
 impl Memory {
+    /// Create a new memory instance with default configuration
     pub fn new(size: usize) -> Self {
-        // Create default memory regions
-        let default_regions = vec![
-            // Special test region with highest priority
-            MemoryRegion {
-                start: 0x00000000, 
-                end: 0x00010000,   // First 64KB - includes both program code and test data
-                readable: true,
-                writable: true,    // Make it writable for tests
-                executable: true,
-            },
-            // Text segment (code) with lower priority
-            MemoryRegion {
-                start: 0x00010000, // Start after test region
-                end: 0x00100000,
-                readable: true,
-                writable: false,
-                executable: true,
-            },
-            // Data segment - Read and write - Make it larger and ensure it's writable
-            MemoryRegion {
-                start: 0x00100000,
-                end: 0x00400000, // Increased size to cover more addresses
-                readable: true,
-                writable: true,
-                executable: false,
-            },
-            // Stack segment - Read and write
-            MemoryRegion {
-                start: 0x7FFF0000,
-                end: 0x80000000,
-                readable: true,
-                writable: true,
-                executable: false,
-            },
-            // Add a general purpose memory region for testing
-            // This allows access to lower memory addresses typically used in examples
-            MemoryRegion {
-                start: 0x00000000, // Start from beginning
-                end: 0x00010000,   // Include the first 64KB
-                readable: true,
-                writable: true,    // Make it writable for tests
-                executable: false,
-            },
-        ];
+        Self::with_config(size, MemoryConfig::default())
+    }
+
+    /// Create a new memory instance with custom configuration
+    pub fn with_config(size: usize, config: MemoryConfig) -> Self {
+        let mut memory_regions = Self::create_default_regions(size);
+
+        // Sort regions by priority (higher priority first)
+        memory_regions.sort_by(|a, b| b.priority.cmp(&a.priority));
 
         Self {
             data: vec![0; size],
             size,
-            heap_top: 0x00200000, // Start heap after data segment
+            heap_top: std::cmp::min(size / 2, 0x00200000), // Start heap at middle or 2MB
             mapped_devices: HashMap::new(),
-            memory_regions: default_regions,
+            memory_regions,
+            config,
         }
     }
 
-    // Address translation function to map high virtual addresses to physical addresses
+    /// Create a simple memory instance for testing (no complex regions)
+    pub fn new_simple(size: usize) -> Self {
+        let simple_region = vec![MemoryRegion {
+            start: 0x00000000,
+            end: size,
+            readable: true,
+            writable: true,
+            executable: true,
+            priority: 255, // Highest priority
+        }];
+
+        Self {
+            data: vec![0; size],
+            size,
+            heap_top: size / 2,
+            mapped_devices: HashMap::new(),
+            memory_regions: simple_region,
+            config: MemoryConfig {
+                strict_alignment: false,
+                verbose_errors: false,
+                enable_permissions: false, // Disable permissions for simple mode
+                enable_translation: false, // Disable translation for simple mode
+            },
+        }
+    }
+
+    /// Create default memory regions based on memory size
+    fn create_default_regions(size: usize) -> Vec<MemoryRegion> {
+        let mut regions = Vec::new();
+
+        // Always create a base region that covers the entire memory for fallback
+        regions.push(MemoryRegion {
+            start: 0x00000000,
+            end: size,
+            readable: true,
+            writable: true,
+            executable: true,
+            priority: 0, // Lowest priority - fallback
+        });
+
+        // Add specific regions only if memory is large enough
+        if size >= 0x10000 {
+            // Text segment (first 64KB)
+            regions.push(MemoryRegion {
+                start: 0x00000000,
+                end: 0x00010000,
+                readable: true,
+                writable: true, // Allow writes for program loading
+                executable: true,
+                priority: 10,
+            });
+        }
+
+        if size >= 0x100000 {
+            // Data segment
+            regions.push(MemoryRegion {
+                start: 0x00010000,
+                end: std::cmp::min(0x00100000, size),
+                readable: true,
+                writable: true,
+                executable: false,
+                priority: 5,
+            });
+        }
+
+        if size >= 0x400000 {
+            // Extended data segment
+            regions.push(MemoryRegion {
+                start: 0x00100000,
+                end: std::cmp::min(0x00400000, size),
+                readable: true,
+                writable: true,
+                executable: false,
+                priority: 3,
+            });
+        }
+
+        regions
+    }
+
+    /// Address translation function to map virtual addresses to physical addresses
     pub fn translate_address(&self, address: usize) -> usize {
-        // When a high memory address (like 0x10000000) is detected,
-        // it's likely from a 'lui' instruction, so map it to a lower physical address
+        if !self.config.enable_translation {
+            return address;
+        }
+
+        // Handle high virtual addresses (typically from LUI instructions)
         if address >= 0x10000000 {
-            // Take the lower bits to map it within our memory bounds
-            let physical_addr = address & 0xFFFFF; // Mask to lower 20 bits (1MB space)
-            
-            if physical_addr >= self.size {
+            // Map high addresses to lower physical space
+            let physical_addr = address & (self.size - 1).max(0xFFFFF);
+
+            if self.config.verbose_errors && physical_addr >= self.size {
                 println!("Warning: Translated address 0x{:08X} (from 0x{:08X}) still out of bounds (size: {})", 
                         physical_addr, address, self.size);
             }
-            
+
             physical_addr
         } else {
             // For lower addresses, use them directly
@@ -115,44 +216,72 @@ impl Memory {
         }
     }
 
-    // Direct write method that bypasses permission checks (for initialization)
+    /// Check if an address is valid for the given operation
+    fn is_valid_access(&self, address: usize, size: usize) -> bool {
+        let physical_addr = self.translate_address(address);
+
+        // Check bounds
+        if physical_addr >= self.size || physical_addr + size > self.size {
+            return false;
+        }
+
+        // Always check alignment for simple memory (when permissions are disabled)
+        // This ensures predictable behavior for property tests
+        if !self.config.enable_permissions || self.config.strict_alignment {
+            match size {
+                1 => true,             // Byte access - no alignment required
+                2 => address % 2 == 0, // Halfword - 2-byte aligned
+                4 => address % 4 == 0, // Word - 4-byte aligned
+                _ => false,            // Invalid size
+            }
+        } else {
+            // In non-strict mode with permissions enabled, allow unaligned access but warn
+            if size > 1 && address % size != 0 && self.config.verbose_errors {
+                println!(
+                    "Warning: Unaligned {}-byte access at address 0x{:08X}",
+                    size, address
+                );
+            }
+            true
+        }
+    }
+
+    /// Direct write method that bypasses permission checks (for initialization)
     pub fn write_word_init(&mut self, address: usize, value: u32) -> bool {
-        // Check alignment (address should be a multiple of 4)
-        if address % 4 != 0 {
-            println!("Warning: Unaligned word write at address 0x{:08x}", address);
+        if !self.is_valid_access(address, 4) {
+            if self.config.verbose_errors {
+                let physical_addr = self.translate_address(address);
+                println!("Memory write failed: address 0x{:08X} (physical: 0x{:08X}) out of bounds (size: {})", 
+                         address, physical_addr, self.size);
+            }
+            return false;
         }
 
-        // Translate virtual address to physical address
         let physical_addr = self.translate_address(address);
-
-        // Only check if the address is within memory bounds
-        if physical_addr + 3 < self.size {
-            let bytes = value.to_le_bytes();
-            self.data[physical_addr..physical_addr + 4].copy_from_slice(&bytes);
-            true
-        } else {
-            println!("Memory write failed: address 0x{:08X} (physical: 0x{:08X}) out of bounds (size: {})", 
-                     address, physical_addr, self.size);
-            false
-        }
+        let bytes = value.to_le_bytes();
+        self.data[physical_addr..physical_addr + 4].copy_from_slice(&bytes);
+        true
     }
 
-    // Direct byte write method (for initialization)
+    /// Direct byte write method (for initialization)
     pub fn write_byte_init(&mut self, address: usize, value: u8) -> bool {
-        // Translate virtual address to physical address
-        let physical_addr = self.translate_address(address);
-        
-        // Only check if the address is within memory bounds
-        if physical_addr < self.size {
-            self.data[physical_addr] = value;
-            true
-        } else {
-            println!("Memory byte write failed: address 0x{:08X} (physical: 0x{:08X}) out of bounds", 
-                    address, physical_addr);
-            false
+        if !self.is_valid_access(address, 1) {
+            if self.config.verbose_errors {
+                let physical_addr = self.translate_address(address);
+                println!(
+                    "Memory byte write failed: address 0x{:08X} (physical: 0x{:08X}) out of bounds",
+                    address, physical_addr
+                );
+            }
+            return false;
         }
+
+        let physical_addr = self.translate_address(address);
+        self.data[physical_addr] = value;
+        true
     }
 
+    /// Read a single byte from memory
     pub fn read_byte(&self, address: usize) -> Option<u8> {
         // Check if address is mapped to a device
         if let Some((base_addr, device)) = self.get_mapped_device(address) {
@@ -160,21 +289,24 @@ impl Memory {
             return Some(device.read_byte(offset));
         }
 
-        // Translate virtual address to physical address
-        let physical_addr = self.translate_address(address);
-
-        // Check if the access is within memory bounds and has read permission
-        if physical_addr < self.size && self.check_permission(address, true, false, false) {
-            Some(self.data[physical_addr])
-        } else {
-            if physical_addr >= self.size {
+        if !self.is_valid_access(address, 1) {
+            if self.config.verbose_errors {
+                let physical_addr = self.translate_address(address);
                 println!("Memory read failed: address 0x{:08X} (physical: 0x{:08X}) out of bounds (size: {})",
                          address, physical_addr, self.size);
             }
-            None
+            return None;
         }
+
+        if self.config.enable_permissions && !self.check_permission(address, true, false, false) {
+            return None;
+        }
+
+        let physical_addr = self.translate_address(address);
+        Some(self.data[physical_addr])
     }
 
+    /// Write a single byte to memory
     pub fn write_byte(&mut self, address: usize, value: u8) -> bool {
         // Check if address is mapped to a device
         if let Some((base_addr, device)) = self.get_mapped_device_mut(address) {
@@ -183,58 +315,55 @@ impl Memory {
             return true;
         }
 
-        // Translate virtual address to physical address
-        let physical_addr = self.translate_address(address);
-
-        // Check if the access is within memory bounds and has write permission
-        if physical_addr < self.size && self.check_permission(address, false, true, false) {
-            self.data[physical_addr] = value;
-            true
-        } else {
-            if physical_addr >= self.size {
+        if !self.is_valid_access(address, 1) {
+            if self.config.verbose_errors {
+                let physical_addr = self.translate_address(address);
                 println!("Memory write failed: address 0x{:08X} (physical: 0x{:08X}) out of bounds (size: {})", 
                         address, physical_addr, self.size);
             }
-            false
+            return false;
         }
+
+        if self.config.enable_permissions && !self.check_permission(address, false, true, false) {
+            return false;
+        }
+
+        let physical_addr = self.translate_address(address);
+        self.data[physical_addr] = value;
+        true
     }
 
+    /// Read a 32-bit word from memory
     pub fn read_word(&self, address: usize) -> Option<u32> {
-        // Check alignment (address should be a multiple of 4)
-        if address % 4 != 0 {
-            println!("Warning: Unaligned word read at address 0x{:08x}", address);
-        }
-
         // Check if address is mapped to a device
         if let Some((base_addr, device)) = self.get_mapped_device(address) {
             let offset = address - base_addr;
             return Some(device.read_word(offset));
         }
 
-        // Translate virtual address to physical address
-        let physical_addr = self.translate_address(address);
-
-        // Check if all bytes are within memory bounds and have read permission
-        if physical_addr + 3 < self.size && 
-           self.check_permission(address, true, false, false) &&
-           self.check_permission(address + 3, true, false, false) {
-            let bytes = &self.data[physical_addr..physical_addr + 4];
-            Some(u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
-        } else {
-            if physical_addr + 3 >= self.size {
+        if !self.is_valid_access(address, 4) {
+            if self.config.verbose_errors {
+                let physical_addr = self.translate_address(address);
                 println!("Memory read failed: address 0x{:08X} (physical: 0x{:08X}) out of bounds (size: {})", 
                          address, physical_addr, self.size);
             }
-            None
+            return None;
         }
+
+        if self.config.enable_permissions
+            && (!self.check_permission(address, true, false, false)
+                || !self.check_permission(address + 3, true, false, false))
+        {
+            return None;
+        }
+
+        let physical_addr = self.translate_address(address);
+        let bytes = &self.data[physical_addr..physical_addr + 4];
+        Some(u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
     }
 
+    /// Write a 32-bit word to memory
     pub fn write_word(&mut self, address: usize, value: u32) -> bool {
-        // Check alignment (address should be a multiple of 4)
-        if address % 4 != 0 {
-            println!("Warning: Unaligned word write at address 0x{:08x}", address);
-        }
-
         // Check if address is mapped to a device
         if let Some((base_addr, device)) = self.get_mapped_device_mut(address) {
             let offset = address - base_addr;
@@ -242,63 +371,65 @@ impl Memory {
             return true;
         }
 
-        // Translate virtual address to physical address
-        let physical_addr = self.translate_address(address);
-
-        // Check if all bytes are within memory bounds and have write permission
-        if physical_addr + 3 < self.size && 
-           self.check_permission(address, false, true, false) &&
-           self.check_permission(address + 3, false, true, false) {
-            let bytes = value.to_le_bytes();
-            self.data[physical_addr..physical_addr + 4].copy_from_slice(&bytes);
-            true
-        } else {
-            if physical_addr + 3 >= self.size {
+        if !self.is_valid_access(address, 4) {
+            if self.config.verbose_errors {
+                let physical_addr = self.translate_address(address);
                 println!("Memory write failed: address 0x{:08X} (physical: 0x{:08X}) out of bounds (size: {})", 
                          address, physical_addr, self.size);
-            } else {
-                println!("Memory write failed: address 0x{:08X} permission denied", address);
             }
-            false
+            return false;
         }
+
+        if self.config.enable_permissions
+            && (!self.check_permission(address, false, true, false)
+                || !self.check_permission(address + 3, false, true, false))
+        {
+            if self.config.verbose_errors {
+                println!(
+                    "Memory write failed: address 0x{:08X} permission denied",
+                    address
+                );
+            }
+            return false;
+        }
+
+        let physical_addr = self.translate_address(address);
+        let bytes = value.to_le_bytes();
+        self.data[physical_addr..physical_addr + 4].copy_from_slice(&bytes);
+        true
     }
 
+    /// Read a 16-bit halfword from memory
     pub fn read_halfword(&self, address: usize) -> Option<u16> {
-        // Check alignment (address should be a multiple of 2)
-        if address % 2 != 0 {
-            println!("Warning: Unaligned halfword read at address 0x{:08x}", address);
-        }
-
         // Check if address is mapped to a device
         if let Some((base_addr, device)) = self.get_mapped_device(address) {
             let offset = address - base_addr;
             return Some((device.read_word(offset) & 0xFFFF) as u16);
         }
 
-        // Translate virtual address to physical address
-        let physical_addr = self.translate_address(address);
-
-        // Check if all bytes are within memory bounds and have read permission
-        if physical_addr + 1 < self.size && 
-           self.check_permission(address, true, false, false) &&
-           self.check_permission(address + 1, true, false, false) {
-            let bytes = &self.data[physical_addr..physical_addr + 2];
-            Some(u16::from_le_bytes([bytes[0], bytes[1]]))
-        } else {
-            if physical_addr + 1 >= self.size {
+        if !self.is_valid_access(address, 2) {
+            if self.config.verbose_errors {
+                let physical_addr = self.translate_address(address);
                 println!("Memory read failed: address 0x{:08X} (physical: 0x{:08X}) out of bounds (size: {})", 
                          address, physical_addr, self.size);
             }
-            None
+            return None;
         }
+
+        if self.config.enable_permissions
+            && (!self.check_permission(address, true, false, false)
+                || !self.check_permission(address + 1, true, false, false))
+        {
+            return None;
+        }
+
+        let physical_addr = self.translate_address(address);
+        let bytes = &self.data[physical_addr..physical_addr + 2];
+        Some(u16::from_le_bytes([bytes[0], bytes[1]]))
     }
 
+    /// Write a 16-bit halfword to memory
     pub fn write_halfword(&mut self, address: usize, value: u16) -> bool {
-        // Check alignment (address should be a multiple of 2)
-        if address % 2 != 0 {
-            println!("Warning: Unaligned halfword write at address 0x{:08x}", address);
-        }
-
         // Check if address is mapped to a device
         if let Some((base_addr, device)) = self.get_mapped_device_mut(address) {
             let offset = address - base_addr;
@@ -306,21 +437,28 @@ impl Memory {
             return true;
         }
 
-        // Translate virtual address to physical address
-        let physical_addr = self.translate_address(address);
-
-        // Check if all bytes are within memory bounds and have write permission
-        if physical_addr + 1 < self.size && 
-           self.check_permission(address, false, true, false) &&
-           self.check_permission(address + 1, false, true, false) {
-            let bytes = value.to_le_bytes();
-            self.data[physical_addr..physical_addr + 2].copy_from_slice(&bytes);
-            true
-        } else {
-            println!("Memory halfword write failed: address 0x{:08X} (physical: 0x{:08X})", 
-                     address, physical_addr);
-            false
+        if !self.is_valid_access(address, 2) {
+            if self.config.verbose_errors {
+                let physical_addr = self.translate_address(address);
+                println!(
+                    "Memory halfword write failed: address 0x{:08X} (physical: 0x{:08X})",
+                    address, physical_addr
+                );
+            }
+            return false;
         }
+
+        if self.config.enable_permissions
+            && (!self.check_permission(address, false, true, false)
+                || !self.check_permission(address + 1, false, true, false))
+        {
+            return false;
+        }
+
+        let physical_addr = self.translate_address(address);
+        let bytes = value.to_le_bytes();
+        self.data[physical_addr..physical_addr + 2].copy_from_slice(&bytes);
+        true
     }
 
     // Memory-mapped device management
@@ -342,7 +480,10 @@ impl Memory {
         None
     }
 
-    fn get_mapped_device_mut(&mut self, address: usize) -> Option<(usize, &mut dyn MemoryMappedDevice)> {
+    fn get_mapped_device_mut(
+        &mut self,
+        address: usize,
+    ) -> Option<(usize, &mut dyn MemoryMappedDevice)> {
         let mut found_base = None;
         for &base_addr in self.mapped_devices.keys() {
             // Assuming each device has a fixed size of 4KB
@@ -351,7 +492,7 @@ impl Memory {
                 break;
             }
         }
-        
+
         if let Some(base_addr) = found_base {
             if let Some(device) = self.mapped_devices.get_mut(&base_addr) {
                 return Some((base_addr, device.as_mut()));
@@ -360,19 +501,31 @@ impl Memory {
         None
     }
 
-    // Memory region management
+    /// Memory region management
     pub fn add_memory_region(&mut self, region: MemoryRegion) {
         self.memory_regions.push(region);
+        // Re-sort by priority
+        self.memory_regions
+            .sort_by(|a, b| b.priority.cmp(&a.priority));
     }
 
+    /// Remove all memory regions and add a new one
+    pub fn set_memory_regions(&mut self, regions: Vec<MemoryRegion>) {
+        self.memory_regions = regions;
+        self.memory_regions
+            .sort_by(|a, b| b.priority.cmp(&a.priority));
+    }
+
+    /// Check memory access permissions
     fn check_permission(&self, address: usize, read: bool, write: bool, execute: bool) -> bool {
+        // Check regions in priority order (highest first)
         for region in &self.memory_regions {
             if address >= region.start && address < region.end {
-                let permitted = (!read || region.readable) && 
-                                (!write || region.writable) && 
-                                (!execute || region.executable);
-                
-                if !permitted {
+                let permitted = (!read || region.readable)
+                    && (!write || region.writable)
+                    && (!execute || region.executable);
+
+                if !permitted && self.config.verbose_errors {
                     if write && !region.writable {
                         println!("Permission denied: Can't write to address 0x{:08X} in region 0x{:08X}-0x{:08X}", 
                                  address, region.start, region.end);
@@ -386,16 +539,16 @@ impl Memory {
                                  address, region.start, region.end);
                     }
                 }
-                
+
                 return permitted;
             }
         }
-        
+
         // If no region is defined for this address, log it for debugging
-        if read || write || execute {
+        if self.config.verbose_errors && (read || write || execute) {
             println!("No memory region defined for address 0x{:08X}", address);
         }
-        
+
         // Default to allowing access for backward compatibility
         true
     }
@@ -415,22 +568,22 @@ impl Memory {
     pub fn dump_memory(&self, start: usize, length: usize) -> String {
         let mut result = String::new();
         let end = std::cmp::min(start + length, self.size);
-        
+
         for i in (start..end).step_by(16) {
             result.push_str(&format!("{:08x}:  ", i));
-            
+
             for j in 0..16 {
                 if i + j < end {
                     result.push_str(&format!("{:02x} ", self.data[i + j]));
                 } else {
                     result.push_str("   ");
                 }
-                
+
                 if j == 7 {
                     result.push(' ');
                 }
             }
-            
+
             result.push_str(" |");
             for j in 0..16 {
                 if i + j < end {
@@ -446,13 +599,17 @@ impl Memory {
             }
             result.push_str("|\n");
         }
-        
+
         result
     }
-    
+
     // New debug function to dump specific memory regions
     pub fn debug_dump(&self, start: usize, count: usize) {
-        println!("Memory dump from 0x{:08X} to 0x{:08X}:", start, start + count * 4 - 1);
+        println!(
+            "Memory dump from 0x{:08X} to 0x{:08X}:",
+            start,
+            start + count * 4 - 1
+        );
         for i in 0..count {
             let addr = start + i * 4;
             if addr < self.size {
@@ -461,19 +618,24 @@ impl Memory {
             }
         }
     }
-    
+
     // Print memory region information
     pub fn print_memory_regions(&self) {
         println!("Memory Regions:");
         for (i, region) in self.memory_regions.iter().enumerate() {
-            println!("  Region {}: 0x{:08X}-0x{:08X} (r:{}, w:{}, x:{})",
-                     i, region.start, region.end,
-                     region.readable, region.writable, region.executable);
+            println!(
+                "  Region {}: 0x{:08X}-0x{:08X} (r:{}, w:{}, x:{})",
+                i, region.start, region.end, region.readable, region.writable, region.executable
+            );
         }
     }
-    
-    // Check if an address range is writable
+
+    /// Check if an address range is writable
     pub fn is_range_writable(&self, start: usize, length: usize) -> bool {
+        if !self.config.enable_permissions {
+            return self.is_valid_access(start, length);
+        }
+
         let end = start + length;
         for addr in start..end {
             if !self.check_permission(addr, false, true, false) {
@@ -482,4 +644,94 @@ impl Memory {
         }
         true
     }
+
+    /// Get current memory configuration
+    pub fn get_config(&self) -> MemoryConfig {
+        self.config
+    }
+
+    /// Update memory configuration
+    pub fn set_config(&mut self, config: MemoryConfig) {
+        self.config = config;
+    }
+
+    /// Enable or disable verbose error messages
+    pub fn set_verbose_errors(&mut self, verbose: bool) {
+        self.config.verbose_errors = verbose;
+    }
+
+    /// Enable or disable strict alignment checking
+    pub fn set_strict_alignment(&mut self, strict: bool) {
+        self.config.strict_alignment = strict;
+    }
+
+    /// Enable or disable memory permissions
+    pub fn set_permissions_enabled(&mut self, enabled: bool) {
+        self.config.enable_permissions = enabled;
+    }
+
+    /// Enable or disable address translation
+    pub fn set_translation_enabled(&mut self, enabled: bool) {
+        self.config.enable_translation = enabled;
+    }
+
+    /// Get memory statistics
+    pub fn get_statistics(&self) -> MemoryStatistics {
+        MemoryStatistics {
+            total_size: self.size,
+            heap_top: self.heap_top,
+            num_regions: self.memory_regions.len(),
+            num_mapped_devices: self.mapped_devices.len(),
+        }
+    }
+
+    /// Clear all memory (set to zero)
+    pub fn clear(&mut self) {
+        self.data.fill(0);
+    }
+
+    /// Fill memory range with a specific value
+    pub fn fill_range(&mut self, start: usize, length: usize, value: u8) -> bool {
+        if !self.is_valid_access(start, length) {
+            return false;
+        }
+
+        let physical_start = self.translate_address(start);
+        let end = physical_start + length;
+
+        if end <= self.size {
+            self.data[physical_start..end].fill(value);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Copy data from one memory location to another
+    pub fn copy_range(&mut self, src: usize, dst: usize, length: usize) -> bool {
+        if !self.is_valid_access(src, length) || !self.is_valid_access(dst, length) {
+            return false;
+        }
+
+        let physical_src = self.translate_address(src);
+        let physical_dst = self.translate_address(dst);
+
+        if physical_src + length <= self.size && physical_dst + length <= self.size {
+            // Use a temporary buffer to handle overlapping ranges
+            let temp: Vec<u8> = self.data[physical_src..physical_src + length].to_vec();
+            self.data[physical_dst..physical_dst + length].copy_from_slice(&temp);
+            true
+        } else {
+            false
+        }
+    }
+}
+
+/// Memory statistics structure
+#[derive(Debug, Clone)]
+pub struct MemoryStatistics {
+    pub total_size: usize,
+    pub heap_top: usize,
+    pub num_regions: usize,
+    pub num_mapped_devices: usize,
 }

@@ -27,7 +27,11 @@ We welcome contributions to the VMIPS Rust Simulator! Whether it's bug fixes, ne
 
 -   **Rustfmt**: We use `rustfmt` to enforce consistent code formatting. Before committing, run:
     ```bash
-    cargo fmt --all
+    cargo fmt --check
+    ```
+    To automatically format your code:
+    ```bash
+    cargo fmt
     ```
 -   **Clippy**: We use `clippy` for linting to catch common mistakes and improve code quality. Ensure your code passes `clippy` checks:
     ```bash
@@ -40,7 +44,7 @@ We welcome contributions to the VMIPS Rust Simulator! Whether it's bug fixes, ne
 
 -   **Run Existing Tests**: Always run the full test suite before submitting a PR to ensure your changes haven't broken existing functionality:
     ```bash
-    cargo test --all-targets
+    cargo test --all
     ```
 -   **Write New Tests**: If you're adding a new feature or fixing a bug, please include unit or integration tests that cover your changes. This helps prevent regressions and ensures correctness.
 

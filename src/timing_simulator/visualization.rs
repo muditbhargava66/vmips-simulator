@@ -1,7 +1,32 @@
-// visualization.rs
+// Copyright (c) 2024 Mudit Bhargava
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
 
-use crate::timing_simulator::pipeline::{Pipeline, PipelineStageStatus};
+// visualization.rs
+//
+// This file contains the pipeline visualization logic for the timing simulator.
+// It provides different output formats (text, CSV, JSON) to visualize the
+// pipeline state at each cycle.
+
 use crate::functional_simulator::instructions::Instruction;
+use crate::timing_simulator::pipeline::{Pipeline, PipelineStageStatus};
 
 #[derive(Clone)]
 pub struct PipelineVisualization {
@@ -29,7 +54,7 @@ impl PipelineVisualization {
             output_format: OutputFormat::Text,
         }
     }
-    
+
     pub fn visualize_pipeline(&self, pipeline: &Pipeline, cycle: usize) -> String {
         match self.output_format {
             OutputFormat::Text => self.visualize_text(pipeline, cycle),
@@ -37,23 +62,23 @@ impl PipelineVisualization {
             OutputFormat::JSON => self.visualize_json(pipeline, cycle),
         }
     }
-    
+
     fn visualize_text(&self, pipeline: &Pipeline, cycle: usize) -> String {
         let mut result = String::new();
-        
+
         // Header
         if self.show_cycle_info {
             result.push_str(&format!("=== Pipeline State at Cycle {} ===\n", cycle));
         }
-        
+
         // Pipeline diagram
         result.push_str("+-------+-------+-------+-------+-------+\n");
         result.push_str("| Fetch | Decode| Exec  | Mem   | Write |\n");
         result.push_str("+-------+-------+-------+-------+-------+\n");
-        
+
         // Stage content - Build a single row with content for each stage
         let mut stage_content = String::from("| ");
-        
+
         for stage in &pipeline.stages {
             let content = match &stage.instruction {
                 Some(instr) => {
@@ -63,7 +88,7 @@ impl PipelineVisualization {
                 },
                 None => "     ".to_string(),
             };
-            
+
             // Add status indicator
             let status_indicator = match stage.status {
                 PipelineStageStatus::Empty => " ",
@@ -77,15 +102,15 @@ impl PipelineVisualization {
                 PipelineStageStatus::Stalled => "S",
                 PipelineStageStatus::Flushed => "F",
             };
-            
+
             stage_content.push_str(&format!("{}{} | ", content, status_indicator));
         }
-        
+
         result.push_str(&stage_content);
         result.push_str("\n");
-        
+
         result.push_str("+-------+-------+-------+-------+-------+\n");
-        
+
         // Hazard information
         if self.show_hazards {
             let hazards = self.get_active_hazards(pipeline);
@@ -96,89 +121,98 @@ impl PipelineVisualization {
                 }
             }
         }
-        
+
         result
     }
-    
+
     fn visualize_csv(&self, pipeline: &Pipeline, cycle: usize) -> String {
         let mut result = String::new();
-        
+
         // Header (only for first cycle)
         if cycle == 1 {
             result.push_str("Cycle,Fetch,Decode,Execute,Memory,Writeback,Hazards\n");
         }
-        
+
         // Pipeline state
         result.push_str(&format!("{},", cycle));
-        
+
         // Each stage
         for stage in &pipeline.stages {
             let content = match &stage.instruction {
                 Some(instr) => format!("{}", self.format_instruction(instr)),
                 None => "".to_string(),
             };
-            
+
             result.push_str(&format!("\"{}\",", content));
         }
-        
+
         // Hazards
         let hazards = self.get_active_hazards(pipeline);
         result.push_str(&format!("\"{}\"\n", hazards.join("; ")));
-        
+
         result
     }
-    
+
     fn visualize_json(&self, pipeline: &Pipeline, cycle: usize) -> String {
         let mut result = String::new();
-        
+
         // Start JSON object
         result.push_str("{\n");
         result.push_str(&format!("  \"cycle\": {},\n", cycle));
         result.push_str("  \"stages\": [\n");
-        
+
         // Each stage
         for (i, stage) in pipeline.stages.iter().enumerate() {
             result.push_str("    {\n");
-            
+
             // Stage type
             result.push_str(&format!("      \"type\": \"{:?}\",\n", stage.stage_type));
-            
+
             // Stage status
             result.push_str(&format!("      \"status\": \"{:?}\",\n", stage.status));
-            
+
             // Instruction
             if let Some(instr) = &stage.instruction {
-                result.push_str(&format!("      \"instruction\": \"{}\",\n", self.format_instruction(instr)));
+                result.push_str(&format!(
+                    "      \"instruction\": \"{}\",\n",
+                    self.format_instruction(instr)
+                ));
             } else {
                 result.push_str("      \"instruction\": null,\n");
             }
-            
+
             // PC
             result.push_str(&format!("      \"pc\": \"0x{:08X}\"", stage.pc));
-            
+
             // Additional details
             if stage.cycles_remaining > 0 {
-                result.push_str(&format!(",\n      \"cyclesRemaining\": {}", stage.cycles_remaining));
+                result.push_str(&format!(
+                    ",\n      \"cyclesRemaining\": {}",
+                    stage.cycles_remaining
+                ));
             }
-            
+
             if let Some(target_reg) = stage.target_register {
                 result.push_str(&format!(",\n      \"targetRegister\": {}", target_reg));
             }
-            
+
             if let Some(memory_address) = stage.memory_address {
-                result.push_str(&format!(",\n      \"memoryAddress\": \"0x{:08X}\"", memory_address));
+                result.push_str(&format!(
+                    ",\n      \"memoryAddress\": \"0x{:08X}\"",
+                    memory_address
+                ));
             }
-            
+
             result.push_str("\n    }");
-            
+
             if i < pipeline.stages.len() - 1 {
                 result.push_str(",");
             }
             result.push_str("\n");
         }
-        
+
         result.push_str("  ],\n");
-        
+
         // Hazards
         result.push_str("  \"hazards\": [\n");
         let hazards = self.get_active_hazards(pipeline);
@@ -190,19 +224,19 @@ impl PipelineVisualization {
             result.push_str("\n");
         }
         result.push_str("  ]\n");
-        
+
         // End JSON object
         result.push_str("}\n");
-        
+
         result
     }
-    
+
     fn format_instruction(&self, instruction: &Instruction) -> String {
         // Simplified representation based on instruction type
         match instruction {
             Instruction::Add { .. } => "ADD",
             Instruction::Sub { .. } => "SUB",
-            Instruction::And { .. } => "AND", 
+            Instruction::And { .. } => "AND",
             Instruction::Or { .. } => "OR",
             Instruction::Xor { .. } => "XOR",
             Instruction::Nor { .. } => "NOR",
@@ -221,18 +255,19 @@ impl PipelineVisualization {
             Instruction::Jr { .. } => "JR",
             Instruction::Nop => "NOP",
             _ => "??",
-        }.to_string()
+        }
+        .to_string()
     }
-    
+
     fn get_active_hazards(&self, pipeline: &Pipeline) -> Vec<String> {
         let mut hazards = Vec::new();
-        
+
         for (hazard_type, count) in &pipeline.hazard_stats {
             if *count > 0 {
                 hazards.push(format!("{:?}: {}", hazard_type, count));
             }
         }
-        
+
         hazards
     }
 }

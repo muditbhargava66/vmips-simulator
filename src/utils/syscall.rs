@@ -1,14 +1,14 @@
 // syscall.rs
 use crate::functional_simulator::memory::Memory;
 use crate::functional_simulator::registers::Registers;
-use std::io::Read;
 use log::{error, info};
+use std::io::Read;
 
 /// Handles MIPS system calls using the ABI conventions.
 /// Returns Some(address) for branches/jumps, None for regular execution.
 pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<u32> {
     let syscall_num = registers.read(2); // v0 contains syscall number
-    
+
     match syscall_num {
         1 => {
             // print_int: Print integer in $a0
@@ -33,7 +33,7 @@ pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<
             let addr = registers.read(4) as usize;
             let mut string = String::new();
             let mut current = addr;
-            
+
             // Read bytes until null terminator or memory boundary
             while let Some(byte) = memory.read_byte(current) {
                 if byte == 0 {
@@ -42,7 +42,7 @@ pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<
                 string.push(byte as char);
                 current += 1;
             }
-            
+
             println!("{}", string);
             None
         },
@@ -53,7 +53,7 @@ pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<
                 error!("Failed to read from stdin: {}", e);
                 return None;
             }
-            
+
             let value = input.trim().parse::<i32>().unwrap_or(0);
             registers.write(2, value as u32);
             None
@@ -65,7 +65,7 @@ pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<
                 error!("Failed to read from stdin: {}", e);
                 return None;
             }
-            
+
             let value = input.trim().parse::<f32>().unwrap_or(0.0);
             registers.write_float(0, value);
             None
@@ -77,7 +77,7 @@ pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<
                 error!("Failed to read from stdin: {}", e);
                 return None;
             }
-            
+
             let value = input.trim().parse::<f32>().unwrap_or(0.0);
             registers.write_float(0, value);
             None
@@ -86,20 +86,20 @@ pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<
             // read_string: Read string from stdin into memory at address in $a0
             let addr = registers.read(4) as usize;
             let max_length = registers.read(5) as usize;
-            
+
             let mut input = String::new();
             if let Err(e) = std::io::stdin().read_line(&mut input) {
                 error!("Failed to read from stdin: {}", e);
                 return None;
             }
-            
+
             // Truncate input to max_length-1 (leave room for null terminator)
             let input = if input.len() > max_length - 1 {
-                input[..max_length-1].to_string()
+                input[..max_length - 1].to_string()
             } else {
                 input
             };
-            
+
             // Write string to memory
             for (i, byte) in input.bytes().enumerate() {
                 if i >= max_length - 1 {
@@ -107,7 +107,7 @@ pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<
                 }
                 memory.write_byte(addr + i, byte);
             }
-            
+
             // Add null terminator
             memory.write_byte(addr + std::cmp::min(input.len(), max_length - 1), 0);
             None
@@ -118,7 +118,7 @@ pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<
             // to memory past the current program
             let amount = registers.read(4) as usize;
             let current_heap_end = memory.heap_end();
-            
+
             if current_heap_end + amount < memory.size {
                 let new_heap_end = current_heap_end + amount;
                 memory.set_heap_end(new_heap_end);
@@ -155,11 +155,11 @@ pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<
             let filename_addr = registers.read(4) as usize;
             let flags = registers.read(5);
             let mode = registers.read(6);
-            
+
             // Read filename from memory as null-terminated string
             let mut filename = String::new();
             let mut current = filename_addr;
-            
+
             while let Some(byte) = memory.read_byte(current) {
                 if byte == 0 {
                     break;
@@ -167,9 +167,12 @@ pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<
                 filename.push(byte as char);
                 current += 1;
             }
-            
-            info!("Syscall 13 (open): Opening file '{}' with flags {}, mode {}", filename, flags, mode);
-            
+
+            info!(
+                "Syscall 13 (open): Opening file '{}' with flags {}, mode {}",
+                filename, flags, mode
+            );
+
             // For now, return a dummy file descriptor
             // In a real implementation, this would maintain a file descriptor table
             registers.write(2, 3); // Return fd 3 (after stdin, stdout, stderr)
@@ -180,18 +183,21 @@ pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<
             let fd = registers.read(4);
             let buffer_addr = registers.read(5) as usize;
             let count = registers.read(6) as usize;
-            
-            info!("Syscall 14 (read): Reading {} bytes from fd {} into address 0x{:x}", count, fd, buffer_addr);
-            
+
+            info!(
+                "Syscall 14 (read): Reading {} bytes from fd {} into address 0x{:x}",
+                count, fd, buffer_addr
+            );
+
             // Simulate successful read with random data for testing
             // In a real implementation, this would read from the actual file
             let bytes_read = count.min(128); // Simulate reading at most 128 bytes
-            
+
             for i in 0..bytes_read {
                 // Fill with placeholder data
                 memory.write_byte(buffer_addr + i, (i % 256) as u8);
             }
-            
+
             registers.write(2, bytes_read as u32); // Return number of bytes read
             None
         },
@@ -200,11 +206,15 @@ pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<
             let fd = registers.read(4);
             let buffer_addr = registers.read(5) as usize;
             let count = registers.read(6) as usize;
-            
-            info!("Syscall 15 (write): Writing {} bytes from address 0x{:x} to fd {}", count, buffer_addr, fd);
-            
+
+            info!(
+                "Syscall 15 (write): Writing {} bytes from address 0x{:x} to fd {}",
+                count, buffer_addr, fd
+            );
+
             // For console output (fd=1), actually print to console
-            if fd == 1 || fd == 2 { // stdout or stderr
+            if fd == 1 || fd == 2 {
+                // stdout or stderr
                 let mut output = String::new();
                 for i in 0..count {
                     if let Some(byte) = memory.read_byte(buffer_addr + i) {
@@ -213,7 +223,7 @@ pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<
                 }
                 print!("{}", output);
             }
-            
+
             // Simulate successful write
             registers.write(2, count as u32); // Return number of bytes written
             None
@@ -221,9 +231,9 @@ pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<
         16 => {
             // close: Close file
             let fd = registers.read(4);
-            
+
             info!("Syscall 16 (close): Closing fd {}", fd);
-            
+
             // Simulate successful close
             registers.write(2, 0); // Success
             None
@@ -241,7 +251,7 @@ pub fn handle_syscall(registers: &mut Registers, memory: &mut Memory) -> Option<
                 .duration_since(UNIX_EPOCH)
                 .expect("Time went backwards")
                 .as_millis() as u32;
-            
+
             registers.write(2, now);
             None
         },

@@ -1,4 +1,29 @@
+// Copyright (c) 2024 Mudit Bhargava
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+
 // assembler.rs
+//
+// This file contains the implementation of the MIPS assembler.
+// It defines the Assembler struct, which is responsible for parsing MIPS
+// assembly code, resolving labels, and generating machine code.
 
 use std::collections::HashMap;
 use std::fmt;
@@ -9,58 +34,106 @@ use std::path::Path;
 
 // Register mapping
 const REGISTER_MAP: &[(&str, u32)] = &[
-    ("$zero", 0), ("$0", 0),
-    ("$at", 1), ("$1", 1),
-    ("$v0", 2), ("$2", 2),
-    ("$v1", 3), ("$3", 3),
-    ("$a0", 4), ("$4", 4),
-    ("$a1", 5), ("$5", 5),
-    ("$a2", 6), ("$6", 6),
-    ("$a3", 7), ("$7", 7),
-    ("$t0", 8), ("$8", 8),
-    ("$t1", 9), ("$9", 9),
-    ("$t2", 10), ("$10", 10),
-    ("$t3", 11), ("$11", 11),
-    ("$t4", 12), ("$12", 12),
-    ("$t5", 13), ("$13", 13),
-    ("$t6", 14), ("$14", 14),
-    ("$t7", 15), ("$15", 15),
-    ("$s0", 16), ("$16", 16),
-    ("$s1", 17), ("$17", 17),
-    ("$s2", 18), ("$18", 18),
-    ("$s3", 19), ("$19", 19),
-    ("$s4", 20), ("$20", 20),
-    ("$s5", 21), ("$21", 21),
-    ("$s6", 22), ("$22", 22),
-    ("$s7", 23), ("$23", 23),
-    ("$t8", 24), ("$24", 24),
-    ("$t9", 25), ("$25", 25),
-    ("$k0", 26), ("$26", 26),
-    ("$k1", 27), ("$27", 27),
-    ("$gp", 28), ("$28", 28),
-    ("$sp", 29), ("$29", 29),
-    ("$fp", 30), ("$30", 30),
-    ("$ra", 31), ("$31", 31),
+    ("$zero", 0),
+    ("$0", 0),
+    ("$at", 1),
+    ("$1", 1),
+    ("$v0", 2),
+    ("$2", 2),
+    ("$v1", 3),
+    ("$3", 3),
+    ("$a0", 4),
+    ("$4", 4),
+    ("$a1", 5),
+    ("$5", 5),
+    ("$a2", 6),
+    ("$6", 6),
+    ("$a3", 7),
+    ("$7", 7),
+    ("$t0", 8),
+    ("$8", 8),
+    ("$t1", 9),
+    ("$9", 9),
+    ("$t2", 10),
+    ("$10", 10),
+    ("$t3", 11),
+    ("$11", 11),
+    ("$t4", 12),
+    ("$12", 12),
+    ("$t5", 13),
+    ("$13", 13),
+    ("$t6", 14),
+    ("$14", 14),
+    ("$t7", 15),
+    ("$15", 15),
+    ("$s0", 16),
+    ("$16", 16),
+    ("$s1", 17),
+    ("$17", 17),
+    ("$s2", 18),
+    ("$18", 18),
+    ("$s3", 19),
+    ("$19", 19),
+    ("$s4", 20),
+    ("$20", 20),
+    ("$s5", 21),
+    ("$21", 21),
+    ("$s6", 22),
+    ("$22", 22),
+    ("$s7", 23),
+    ("$23", 23),
+    ("$t8", 24),
+    ("$24", 24),
+    ("$t9", 25),
+    ("$25", 25),
+    ("$k0", 26),
+    ("$26", 26),
+    ("$k1", 27),
+    ("$27", 27),
+    ("$gp", 28),
+    ("$28", 28),
+    ("$sp", 29),
+    ("$29", 29),
+    ("$fp", 30),
+    ("$30", 30),
+    ("$ra", 31),
+    ("$31", 31),
 ];
 
 // FP register mapping
 const FP_REGISTER_MAP: &[(&str, u32)] = &[
-    ("$f0", 0), ("$f1", 1),
-    ("$f2", 2), ("$f3", 3),
-    ("$f4", 4), ("$f5", 5),
-    ("$f6", 6), ("$f7", 7),
-    ("$f8", 8), ("$f9", 9),
-    ("$f10", 10), ("$f11", 11),
-    ("$f12", 12), ("$f13", 13),
-    ("$f14", 14), ("$f15", 15),
-    ("$f16", 16), ("$f17", 17),
-    ("$f18", 18), ("$f19", 19),
-    ("$f20", 20), ("$f21", 21),
-    ("$f22", 22), ("$f23", 23),
-    ("$f24", 24), ("$f25", 25),
-    ("$f26", 26), ("$f27", 27),
-    ("$f28", 28), ("$f29", 29),
-    ("$f30", 30), ("$f31", 31),
+    ("$f0", 0),
+    ("$f1", 1),
+    ("$f2", 2),
+    ("$f3", 3),
+    ("$f4", 4),
+    ("$f5", 5),
+    ("$f6", 6),
+    ("$f7", 7),
+    ("$f8", 8),
+    ("$f9", 9),
+    ("$f10", 10),
+    ("$f11", 11),
+    ("$f12", 12),
+    ("$f13", 13),
+    ("$f14", 14),
+    ("$f15", 15),
+    ("$f16", 16),
+    ("$f17", 17),
+    ("$f18", 18),
+    ("$f19", 19),
+    ("$f20", 20),
+    ("$f21", 21),
+    ("$f22", 22),
+    ("$f23", 23),
+    ("$f24", 24),
+    ("$f25", 25),
+    ("$f26", 26),
+    ("$f27", 27),
+    ("$f28", 28),
+    ("$f29", 29),
+    ("$f30", 30),
+    ("$f31", 31),
 ];
 
 // Assembler error
@@ -80,13 +153,27 @@ impl fmt::Display for AssemblerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             AssemblerError::IoError(err) => write!(f, "I/O error: {}", err),
-            AssemblerError::ParseError(msg, line) => write!(f, "Parse error at line {}: {}", line, msg),
-            AssemblerError::SymbolError(msg, line) => write!(f, "Symbol error at line {}: {}", line, msg),
-            AssemblerError::SyntaxError(msg, line) => write!(f, "Syntax error at line {}: {}", line, msg),
-            AssemblerError::RegisterError(msg, line) => write!(f, "Register error at line {}: {}", line, msg),
-            AssemblerError::OperandError(msg, line) => write!(f, "Operand error at line {}: {}", line, msg),
-            AssemblerError::RangeError(msg, line) => write!(f, "Range error at line {}: {}", line, msg),
-            AssemblerError::UnsupportedError(msg, line) => write!(f, "Unsupported feature at line {}: {}", line, msg),
+            AssemblerError::ParseError(msg, line) => {
+                write!(f, "Parse error at line {}: {}", line, msg)
+            },
+            AssemblerError::SymbolError(msg, line) => {
+                write!(f, "Symbol error at line {}: {}", line, msg)
+            },
+            AssemblerError::SyntaxError(msg, line) => {
+                write!(f, "Syntax error at line {}: {}", line, msg)
+            },
+            AssemblerError::RegisterError(msg, line) => {
+                write!(f, "Register error at line {}: {}", line, msg)
+            },
+            AssemblerError::OperandError(msg, line) => {
+                write!(f, "Operand error at line {}: {}", line, msg)
+            },
+            AssemblerError::RangeError(msg, line) => {
+                write!(f, "Range error at line {}: {}", line, msg)
+            },
+            AssemblerError::UnsupportedError(msg, line) => {
+                write!(f, "Unsupported feature at line {}: {}", line, msg)
+            },
         }
     }
 }
@@ -135,12 +222,12 @@ impl Assembler {
         for &(name, num) in REGISTER_MAP {
             register_map.insert(name.to_string(), num);
         }
-        
+
         let mut fp_register_map = HashMap::new();
         for &(name, num) in FP_REGISTER_MAP {
             fp_register_map.insert(name.to_string(), num);
         }
-        
+
         Self {
             labels: HashMap::new(),
             data_section: Vec::new(),
@@ -154,112 +241,112 @@ impl Assembler {
             current_filename: String::new(),
         }
     }
-    
+
     // Assemble a file
     pub fn assemble_file<P: AsRef<Path>>(&mut self, path: P) -> Result<Vec<u8>, AssemblerError> {
         let file = File::open(&path)?;
         self.current_filename = path.as_ref().to_string_lossy().to_string();
         let reader = io::BufReader::new(file);
-        
+
         // First pass: collect labels and directives
         self.first_pass(reader)?;
-        
+
         // Reset for second pass
         self.current_address = 0;
         self.in_data_section = false;
-        
+
         // Second pass: generate code
         let file = File::open(path)?;
         let reader = io::BufReader::new(file);
         self.second_pass(reader)?;
-        
+
         // Combine data and text sections
         let mut result = Vec::new();
-        
+
         // Write data section size (4 bytes)
         let data_size = self.data_section.len() as u32;
         result.extend_from_slice(&data_size.to_le_bytes());
-        
+
         // Write text section size (4 bytes)
         let text_size = self.text_section.len() as u32 * 4;
         result.extend_from_slice(&text_size.to_le_bytes());
-        
+
         // Write data section
         result.extend_from_slice(&self.data_section);
-        
+
         // Write text section
         for instr in &self.text_section {
             result.extend_from_slice(&instr.to_le_bytes());
         }
-        
+
         if !self.errors.is_empty() {
             // Return the first error
             return Err(self.errors.remove(0));
         }
-        
+
         Ok(result)
     }
-    
+
     // Assemble from a string
     pub fn assemble_string(&mut self, code: &str) -> Result<Vec<u8>, AssemblerError> {
         self.current_filename = "<string>".to_string();
-    
+
         // Create a cursor that implements BufRead
         let cursor = io::Cursor::new(code);
-        
+
         // First pass: collect labels and directives
         self.first_pass(BufReader::new(cursor.clone()))?;
-        
+
         // Reset for second pass
         self.current_address = 0;
         self.in_data_section = false;
-        
+
         // Second pass: generate code
         self.second_pass(BufReader::new(cursor))?;
-        
+
         // Combine data and text sections
         let mut result = Vec::new();
-        
+
         // Write data section size (4 bytes)
         let data_size = self.data_section.len() as u32;
         result.extend_from_slice(&data_size.to_le_bytes());
-        
+
         // Write text section size (4 bytes)
         let text_size = self.text_section.len() as u32 * 4;
         result.extend_from_slice(&text_size.to_le_bytes());
-        
+
         // Write data section
         result.extend_from_slice(&self.data_section);
-        
+
         // Write text section
         for instr in &self.text_section {
             result.extend_from_slice(&instr.to_le_bytes());
         }
-        
+
         if !self.errors.is_empty() {
             // Return the first error
             return Err(self.errors.remove(0));
         }
-        
+
         Ok(result)
     }
-    
+
     // First pass: collect labels and directives
     fn first_pass<R: BufRead>(&mut self, reader: R) -> Result<(), AssemblerError> {
         self.current_line = 0;
         self.current_address = 0;
         self.in_data_section = false;
         self.labels.clear();
-        
+
         for line_result in reader.lines() {
             self.current_line += 1;
             let line = line_result?;
             let line = self.preprocess_line(&line);
-            
+
             if line.is_empty() {
                 continue;
             }
-            
+
             // Check if this line has a label
             if let Some(label_end) = line.find(':') {
                 let label = line[..label_end].trim();
@@ -267,31 +354,31 @@ impl Assembler {
                     // Add label to symbol table
                     self.labels.insert(label.to_string(), self.current_address);
                 }
-                
+
                 // Process the rest of the line (if any)
                 let rest = line[label_end + 1..].trim();
                 if rest.is_empty() {
                     continue;
                 }
-                
+
                 self.process_first_pass_line(rest)?;
             } else {
                 // No label, process the whole line
                 self.process_first_pass_line(&line)?;
             }
         }
-        
+
         Ok(())
     }
-    
+
     // Process a line during the first pass
     fn process_first_pass_line(&mut self, line: &str) -> Result<(), AssemblerError> {
         let tokens = self.tokenize(line)?;
-        
+
         if tokens.is_empty() {
             return Ok(());
         }
-        
+
         match &tokens[0] {
             Token::Directive(directive) => {
                 match directive.as_str() {
@@ -305,7 +392,10 @@ impl Assembler {
                         // Each word takes 4 bytes in data section
                         if self.in_data_section {
                             // Count how many words are defined
-                            let word_count = tokens.iter().filter(|t| matches!(t, Token::Immediate(_) | Token::Symbol(_))).count();
+                            let word_count = tokens
+                                .iter()
+                                .filter(|t| matches!(t, Token::Immediate(_) | Token::Symbol(_)))
+                                .count();
                             self.current_address += word_count as u32 * 4;
                         } else {
                             return Err(AssemblerError::SyntaxError(
@@ -318,7 +408,10 @@ impl Assembler {
                         // Each byte takes 1 byte in data section
                         if self.in_data_section {
                             // Count how many bytes are defined
-                            let byte_count = tokens.iter().filter(|t| matches!(t, Token::Immediate(_))).count();
+                            let byte_count = tokens
+                                .iter()
+                                .filter(|t| matches!(t, Token::Immediate(_)))
+                                .count();
                             self.current_address += byte_count as u32;
                         } else {
                             return Err(AssemblerError::SyntaxError(
@@ -331,7 +424,10 @@ impl Assembler {
                         // Each halfword takes 2 bytes in data section
                         if self.in_data_section {
                             // Count how many halfwords are defined
-                            let half_count = tokens.iter().filter(|t| matches!(t, Token::Immediate(_))).count();
+                            let half_count = tokens
+                                .iter()
+                                .filter(|t| matches!(t, Token::Immediate(_)))
+                                .count();
                             self.current_address += half_count as u32 * 2;
                         } else {
                             return Err(AssemblerError::SyntaxError(
@@ -349,7 +445,7 @@ impl Assembler {
                                     self.current_line,
                                 ));
                             }
-                            
+
                             if let Token::StringLiteral(string) = &tokens[1] {
                                 let null_terminator = if directive == ".asciiz" { 1 } else { 0 };
                                 self.current_address += string.len() as u32 + null_terminator;
@@ -375,7 +471,7 @@ impl Assembler {
                                     self.current_line,
                                 ));
                             }
-                            
+
                             if let Token::Immediate(size) = tokens[1] {
                                 if size < 0 {
                                     return Err(AssemblerError::RangeError(
@@ -405,7 +501,7 @@ impl Assembler {
                                 self.current_line,
                             ));
                         }
-                        
+
                         if let Token::Immediate(align) = tokens[1] {
                             if align < 0 || align > 31 {
                                 return Err(AssemblerError::RangeError(
@@ -413,7 +509,7 @@ impl Assembler {
                                     self.current_line,
                                 ));
                             }
-                            
+
                             let alignment = 1 << align;
                             let misalignment = self.current_address % alignment;
                             if misalignment != 0 {
@@ -421,14 +517,15 @@ impl Assembler {
                             }
                         } else {
                             return Err(AssemblerError::SyntaxError(
-                                ".align directive requires a numeric alignment argument".to_string(),
+                                ".align directive requires a numeric alignment argument"
+                                    .to_string(),
                                 self.current_line,
                             ));
                         }
                     },
                     _ => {
                         // Ignore unknown directives in first pass
-                    }
+                    },
                 }
             },
             Token::Instruction(_) => {
@@ -447,12 +544,12 @@ impl Assembler {
                     format!("Unexpected token at start of line: {:?}", tokens[0]),
                     self.current_line,
                 ));
-            }
+            },
         }
-        
+
         Ok(())
     }
-    
+
     // Second pass: generate code
     fn second_pass<R: BufRead>(&mut self, reader: R) -> Result<(), AssemblerError> {
         self.current_line = 0;
@@ -460,16 +557,16 @@ impl Assembler {
         self.in_data_section = false;
         self.data_section.clear();
         self.text_section.clear();
-        
+
         for line_result in reader.lines() {
             self.current_line += 1;
             let line = line_result?;
             let line = self.preprocess_line(&line);
-            
+
             if line.is_empty() {
                 continue;
             }
-            
+
             // Check if this line has a label
             if let Some(label_end) = line.find(':') {
                 // Process the rest of the line (if any)
@@ -477,25 +574,25 @@ impl Assembler {
                 if rest.is_empty() {
                     continue;
                 }
-                
+
                 self.process_second_pass_line(rest)?;
             } else {
                 // No label, process the whole line
                 self.process_second_pass_line(&line)?;
             }
         }
-        
+
         Ok(())
     }
-    
+
     // Process a line during the second pass
     fn process_second_pass_line(&mut self, line: &str) -> Result<(), AssemblerError> {
         let tokens = self.tokenize(line)?;
-        
+
         if tokens.is_empty() {
             return Ok(());
         }
-        
+
         match &tokens[0] {
             Token::Directive(directive) => {
                 match directive.as_str() {
@@ -511,17 +608,19 @@ impl Assembler {
                                 if let Token::Comma = tokens[i] {
                                     continue;
                                 }
-                                
+
                                 match &tokens[i] {
                                     Token::Immediate(value) => {
                                         // Add word to data section
-                                        self.data_section.extend_from_slice(&(*value as u32).to_le_bytes());
+                                        self.data_section
+                                            .extend_from_slice(&(*value as u32).to_le_bytes());
                                         self.current_address += 4;
                                     },
                                     Token::Symbol(symbol) => {
                                         // Look up symbol value
                                         if let Some(&addr) = self.labels.get(symbol) {
-                                            self.data_section.extend_from_slice(&addr.to_le_bytes());
+                                            self.data_section
+                                                .extend_from_slice(&addr.to_le_bytes());
                                             self.current_address += 4;
                                         } else {
                                             return Err(AssemblerError::SymbolError(
@@ -535,7 +634,7 @@ impl Assembler {
                                             format!("Expected immediate value or symbol in .word directive, got {:?}", tokens[i]),
                                             self.current_line,
                                         ));
-                                    }
+                                    },
                                 }
                             }
                         } else {
@@ -551,7 +650,7 @@ impl Assembler {
                                 if let Token::Comma = tokens[i] {
                                     continue;
                                 }
-                                
+
                                 if let Token::Immediate(value) = tokens[i] {
                                     if value < -128 || value > 255 {
                                         return Err(AssemblerError::RangeError(
@@ -559,13 +658,16 @@ impl Assembler {
                                             self.current_line,
                                         ));
                                     }
-                                    
+
                                     // Add byte to data section
                                     self.data_section.push(value as u8);
                                     self.current_address += 1;
                                 } else {
                                     return Err(AssemblerError::SyntaxError(
-                                        format!("Expected immediate value in .byte directive, got {:?}", tokens[i]),
+                                        format!(
+                                            "Expected immediate value in .byte directive, got {:?}",
+                                            tokens[i]
+                                        ),
                                         self.current_line,
                                     ));
                                 }
@@ -583,7 +685,7 @@ impl Assembler {
                                 if let Token::Comma = tokens[i] {
                                     continue;
                                 }
-                                
+
                                 if let Token::Immediate(value) = tokens[i] {
                                     if value < -32768 || value > 65535 {
                                         return Err(AssemblerError::RangeError(
@@ -591,13 +693,17 @@ impl Assembler {
                                             self.current_line,
                                         ));
                                     }
-                                    
+
                                     // Add halfword to data section
-                                    self.data_section.extend_from_slice(&(value as u16).to_le_bytes());
+                                    self.data_section
+                                        .extend_from_slice(&(value as u16).to_le_bytes());
                                     self.current_address += 2;
                                 } else {
                                     return Err(AssemblerError::SyntaxError(
-                                        format!("Expected immediate value in .half directive, got {:?}", tokens[i]),
+                                        format!(
+                                            "Expected immediate value in .half directive, got {:?}",
+                                            tokens[i]
+                                        ),
                                         self.current_line,
                                     ));
                                 }
@@ -617,12 +723,12 @@ impl Assembler {
                                     self.current_line,
                                 ));
                             }
-                            
+
                             if let Token::StringLiteral(string) = &tokens[1] {
                                 // Add string to data section
                                 self.data_section.extend_from_slice(string.as_bytes());
                                 self.current_address += string.len() as u32;
-                                
+
                                 // Add null terminator for .asciiz
                                 if directive == ".asciiz" {
                                     self.data_section.push(0);
@@ -649,7 +755,7 @@ impl Assembler {
                                     self.current_line,
                                 ));
                             }
-                            
+
                             if let Token::Immediate(size) = tokens[1] {
                                 if size < 0 {
                                     return Err(AssemblerError::RangeError(
@@ -657,7 +763,7 @@ impl Assembler {
                                         self.current_line,
                                     ));
                                 }
-                                
+
                                 // Add zeros to data section
                                 self.data_section.extend(vec![0; size as usize]);
                                 self.current_address += size as u32;
@@ -681,7 +787,7 @@ impl Assembler {
                                 self.current_line,
                             ));
                         }
-                        
+
                         if let Token::Immediate(align) = tokens[1] {
                             if align < 0 || align > 31 {
                                 return Err(AssemblerError::RangeError(
@@ -689,12 +795,12 @@ impl Assembler {
                                     self.current_line,
                                 ));
                             }
-                            
+
                             let alignment = 1 << align;
                             let misalignment = self.current_address % alignment;
                             if misalignment != 0 {
                                 let padding = alignment - misalignment;
-                                
+
                                 // Add padding bytes
                                 if self.in_data_section {
                                     self.data_section.extend(vec![0; padding as usize]);
@@ -704,19 +810,20 @@ impl Assembler {
                                         self.text_section.push(0);
                                     }
                                 }
-                                
+
                                 self.current_address += padding;
                             }
                         } else {
                             return Err(AssemblerError::SyntaxError(
-                                ".align directive requires a numeric alignment argument".to_string(),
+                                ".align directive requires a numeric alignment argument"
+                                    .to_string(),
                                 self.current_line,
                             ));
                         }
                     },
                     _ => {
                         // Ignore unknown directives in second pass
-                    }
+                    },
                 }
             },
             Token::Instruction(instr) => {
@@ -737,17 +844,17 @@ impl Assembler {
                     format!("Unexpected token at start of line: {:?}", tokens[0]),
                     self.current_line,
                 ));
-            }
+            },
         }
-        
+
         Ok(())
     }
-    
+
     // Tokenize a line of assembly code
     fn tokenize(&self, line: &str) -> Result<Vec<Token>, AssemblerError> {
         let mut tokens = Vec::new();
         let mut chars = line.chars().peekable();
-        
+
         while let Some(&c) = chars.peek() {
             match c {
                 ' ' | '\t' | '\r' | '\n' => {
@@ -770,7 +877,7 @@ impl Assembler {
                     // Register
                     chars.next(); // Skip $
                     let mut reg_name = String::from("$");
-                    
+
                     while let Some(&c) = chars.peek() {
                         if c.is_alphanumeric() {
                             reg_name.push(c);
@@ -779,7 +886,7 @@ impl Assembler {
                             break;
                         }
                     }
-                    
+
                     // Check if it's a valid register
                     if reg_name.starts_with("$f") {
                         // FP register
@@ -824,25 +931,25 @@ impl Assembler {
                 '-' | '+' | '0'..='9' => {
                     // Immediate value
                     let mut num_str = String::new();
-                    
+
                     // Handle sign
                     if c == '-' || c == '+' {
                         num_str.push(c);
                         chars.next();
                     }
-                    
+
                     // Check if it's a hex, octal, or binary number
                     if chars.peek() == Some(&'0') {
                         num_str.push('0');
                         chars.next();
-                        
+
                         if let Some(&c) = chars.peek() {
                             match c {
                                 'x' | 'X' => {
                                     // Hex number
                                     num_str.push('x');
                                     chars.next();
-                                    
+
                                     while let Some(&c) = chars.peek() {
                                         if c.is_digit(16) {
                                             num_str.push(c);
@@ -851,7 +958,7 @@ impl Assembler {
                                             break;
                                         }
                                     }
-                                    
+
                                     // Parse hex number
                                     if let Ok(value) = i32::from_str_radix(&num_str[2..], 16) {
                                         tokens.push(Token::Immediate(value));
@@ -866,7 +973,7 @@ impl Assembler {
                                     // Binary number
                                     num_str.push('b');
                                     chars.next();
-                                    
+
                                     while let Some(&c) = chars.peek() {
                                         if c == '0' || c == '1' {
                                             num_str.push(c);
@@ -875,7 +982,7 @@ impl Assembler {
                                             break;
                                         }
                                     }
-                                    
+
                                     // Parse binary number
                                     if let Ok(value) = i32::from_str_radix(&num_str[2..], 2) {
                                         tokens.push(Token::Immediate(value));
@@ -896,7 +1003,7 @@ impl Assembler {
                                             break;
                                         }
                                     }
-                                    
+
                                     // Parse octal number
                                     if let Ok(value) = i32::from_str_radix(&num_str[1..], 8) {
                                         tokens.push(Token::Immediate(value));
@@ -910,7 +1017,7 @@ impl Assembler {
                                 _ => {
                                     // Just a zero
                                     tokens.push(Token::Immediate(0));
-                                }
+                                },
                             }
                         } else {
                             // Just a zero
@@ -926,7 +1033,7 @@ impl Assembler {
                                 break;
                             }
                         }
-                        
+
                         // Parse decimal number
                         if let Ok(value) = num_str.parse::<i32>() {
                             tokens.push(Token::Immediate(value));
@@ -943,7 +1050,7 @@ impl Assembler {
                     let mut name = String::new();
                     name.push(c);
                     chars.next();
-                    
+
                     while let Some(&c) = chars.peek() {
                         if c.is_alphanumeric() || c == '_' {
                             name.push(c);
@@ -952,14 +1059,14 @@ impl Assembler {
                             break;
                         }
                     }
-                    
+
                     tokens.push(Token::Directive(name));
                 },
                 '"' => {
                     // String literal
                     chars.next(); // Skip opening quote
                     let mut string = String::new();
-                    
+
                     while let Some(&c) = chars.peek() {
                         if c == '"' {
                             chars.next(); // Skip closing quote
@@ -967,7 +1074,7 @@ impl Assembler {
                         } else if c == '\\' {
                             // Escape sequence
                             chars.next(); // Skip backslash
-                            
+
                             if let Some(&c) = chars.peek() {
                                 match c {
                                     'n' => string.push('\n'),
@@ -980,7 +1087,7 @@ impl Assembler {
                                         // Hex escape sequence (\xHH)
                                         chars.next(); // Skip x
                                         let mut hex = String::new();
-                                        
+
                                         for _ in 0..2 {
                                             if let Some(&c) = chars.peek() {
                                                 if c.is_digit(16) {
@@ -993,7 +1100,7 @@ impl Assembler {
                                                 break;
                                             }
                                         }
-                                        
+
                                         if let Ok(value) = u8::from_str_radix(&hex, 16) {
                                             string.push(value as char);
                                         } else {
@@ -1002,12 +1109,12 @@ impl Assembler {
                                                 self.current_line,
                                             ));
                                         }
-                                        
+
                                         continue; // Skip the chars.next() below
                                     },
                                     _ => string.push(c),
                                 }
-                                
+
                                 chars.next();
                             } else {
                                 return Err(AssemblerError::ParseError(
@@ -1020,13 +1127,13 @@ impl Assembler {
                             chars.next();
                         }
                     }
-                    
+
                     tokens.push(Token::StringLiteral(string));
                 },
                 'a'..='z' | 'A'..='Z' | '_' => {
                     // Instruction or symbol
                     let mut name = String::new();
-                    
+
                     while let Some(&c) = chars.peek() {
                         if c.is_alphanumeric() || c == '_' || c == '.' {
                             name.push(c);
@@ -1035,7 +1142,7 @@ impl Assembler {
                             break;
                         }
                     }
-                    
+
                     // Check if it's an instruction
                     if let Some(canonical_name) = self.normalize_instruction(&name) {
                         tokens.push(Token::Instruction(canonical_name));
@@ -1053,13 +1160,13 @@ impl Assembler {
                         format!("Unexpected character: {}", c),
                         self.current_line,
                     ));
-                }
+                },
             }
         }
-        
+
         Ok(tokens)
     }
-    
+
     // Normalize instruction name (convert aliases to canonical form)
     fn normalize_instruction(&self, name: &str) -> Option<String> {
         // Common instruction aliases
@@ -1131,14 +1238,14 @@ impl Assembler {
             _ => None,
         }
     }
-    
+
     // Preprocess a line of code
     fn preprocess_line(&self, line: &str) -> String {
         // Remove comments
         let mut result = String::new();
         let mut in_string = false;
         let mut escape = false;
-        
+
         for c in line.chars() {
             if in_string {
                 if escape {
@@ -1158,10 +1265,10 @@ impl Assembler {
                 result.push(c);
             }
         }
-        
+
         result.trim().to_string()
     }
-    
+
     // Assemble an instruction
     fn assemble_instruction(&self, instr: &str, operands: &[Token]) -> Result<u32, AssemblerError> {
         match instr {
@@ -1234,16 +1341,21 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble R-type instruction
-    fn assemble_r_type(&self, opcode: u32, funct: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
+    fn assemble_r_type(
+        &self,
+        opcode: u32,
+        funct: u32,
+        operands: &[Token],
+    ) -> Result<u32, AssemblerError> {
         if operands.len() < 5 {
             return Err(AssemblerError::SyntaxError(
                 "R-type instruction requires 3 registers".to_string(),
                 self.current_line,
             ));
         }
-        
+
         match (&operands[0], &operands[2], &operands[4]) {
             (Token::Register(rd), Token::Register(rs), Token::Register(rt)) => {
                 // opcode (6 bits) | rs (5 bits) | rt (5 bits) | rd (5 bits) | shamt (5 bits) | funct (6 bits)
@@ -1255,16 +1367,21 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble shift instructions (sll, srl, sra)
-    fn assemble_shift(&self, opcode: u32, funct: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
+    fn assemble_shift(
+        &self,
+        opcode: u32,
+        funct: u32,
+        operands: &[Token],
+    ) -> Result<u32, AssemblerError> {
         if operands.len() < 5 {
             return Err(AssemblerError::SyntaxError(
                 "Shift instruction requires a register, a register, and a shift amount".to_string(),
                 self.current_line,
             ));
         }
-        
+
         match (&operands[0], &operands[2], &operands[4]) {
             (Token::Register(rd), Token::Register(rt), Token::Immediate(shamt)) => {
                 if *shamt < 0 || *shamt > 31 {
@@ -1273,9 +1390,14 @@ impl Assembler {
                         self.current_line,
                     ));
                 }
-                
+
                 // opcode (6 bits) | rs (5 bits) | rt (5 bits) | rd (5 bits) | shamt (5 bits) | funct (6 bits)
-                Ok((opcode << 26) | (0 << 21) | (*rt << 16) | (*rd << 11) | ((*shamt as u32) << 6) | funct)
+                Ok((opcode << 26)
+                    | (0 << 21)
+                    | (*rt << 16)
+                    | (*rd << 11)
+                    | ((*shamt as u32) << 6)
+                    | funct)
             },
             _ => Err(AssemblerError::SyntaxError(
                 "Invalid operands for shift instruction".to_string(),
@@ -1283,7 +1405,7 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble jump register (jr)
     fn assemble_jr(&self, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.is_empty() {
@@ -1292,7 +1414,7 @@ impl Assembler {
                 self.current_line,
             ));
         }
-        
+
         match &operands[0] {
             Token::Register(rs) => {
                 // opcode (6 bits) | rs (5 bits) | 0 (15 bits) | funct (6 bits)
@@ -1304,7 +1426,7 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble jump and link register (jalr)
     fn assemble_jalr(&self, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 1 {
@@ -1313,7 +1435,7 @@ impl Assembler {
                 self.current_line,
             ));
         }
-        
+
         if operands.len() == 1 {
             // Only rs specified, rd defaults to $ra (31)
             match &operands[0] {
@@ -1345,16 +1467,17 @@ impl Assembler {
             ))
         }
     }
-    
+
     // Assemble I-type instruction
     fn assemble_i_type(&self, opcode: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 5 {
             return Err(AssemblerError::SyntaxError(
-                "I-type instruction requires a register, a register, and an immediate value".to_string(),
+                "I-type instruction requires a register, a register, and an immediate value"
+                    .to_string(),
                 self.current_line,
             ));
         }
-        
+
         match (&operands[0], &operands[2], &operands[4]) {
             (Token::Register(rt), Token::Register(rs), Token::Immediate(imm)) => {
                 if *imm < -32768 || *imm > 65535 {
@@ -1363,7 +1486,7 @@ impl Assembler {
                         self.current_line,
                     ));
                 }
-                
+
                 // opcode (6 bits) | rs (5 bits) | rt (5 bits) | immediate (16 bits)
                 Ok((opcode << 26) | (*rs << 21) | (*rt << 16) | (*imm as u32 & 0xFFFF))
             },
@@ -1372,14 +1495,14 @@ impl Assembler {
                 if let Some(&addr) = self.labels.get(symbol) {
                     // Calculate offset for PC-relative addressing
                     let offset = (addr as i32 - (self.current_address as i32 + 4)) / 4;
-                    
+
                     if offset < -32768 || offset > 32767 {
                         return Err(AssemblerError::RangeError(
                             format!("Symbol offset out of range: {}", offset),
                             self.current_line,
                         ));
                     }
-                    
+
                     // opcode (6 bits) | rs (5 bits) | rt (5 bits) | immediate (16 bits)
                     Ok((opcode << 26) | (*rs << 21) | (*rt << 16) | (offset as u32 & 0xFFFF))
                 } else {
@@ -1395,7 +1518,7 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble load upper immediate (lui)
     fn assemble_lui(&self, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
@@ -1404,7 +1527,7 @@ impl Assembler {
                 self.current_line,
             ));
         }
-        
+
         match (&operands[0], &operands[2]) {
             (Token::Register(rt), Token::Immediate(imm)) => {
                 if *imm < -32768 || *imm > 65535 {
@@ -1413,7 +1536,7 @@ impl Assembler {
                         self.current_line,
                     ));
                 }
-                
+
                 // opcode (6 bits) | 0 (5 bits) | rt (5 bits) | immediate (16 bits)
                 Ok((0x0F << 26) | (0 << 21) | (*rt << 16) | (*imm as u32 & 0xFFFF))
             },
@@ -1423,7 +1546,7 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble load and store instructions
     fn assemble_load_store(&self, opcode: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
@@ -1432,12 +1555,12 @@ impl Assembler {
                 self.current_line,
             ));
         }
-        
+
         match &operands[0] {
             Token::Register(rt) => {
                 // Parse the address operand
                 let (base, offset) = self.parse_address(&operands[1..])?;
-                
+
                 // opcode (6 bits) | base (5 bits) | rt (5 bits) | offset (16 bits)
                 Ok((opcode << 26) | (base << 21) | (*rt << 16) | (offset as u32 & 0xFFFF))
             },
@@ -1447,7 +1570,7 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Parse an address operand (offset(base))
     fn parse_address(&self, tokens: &[Token]) -> Result<(u32, i16), AssemblerError> {
         if tokens.is_empty() {
@@ -1456,12 +1579,12 @@ impl Assembler {
                 self.current_line,
             ));
         }
-        
+
         // Check if it's a simple base register
         if let Token::Register(base) = tokens[0] {
             return Ok((base, 0));
         }
-        
+
         // Check for offset(base) format
         if tokens.len() >= 4 && tokens[1] == Token::LeftParen && tokens[3] == Token::RightParen {
             match (&tokens[0], &tokens[2]) {
@@ -1472,7 +1595,7 @@ impl Assembler {
                             self.current_line,
                         ));
                     }
-                    
+
                     Ok((*base, *offset as i16))
                 },
                 (Token::Symbol(symbol), Token::Register(base)) => {
@@ -1498,7 +1621,7 @@ impl Assembler {
             ))
         }
     }
-    
+
     // Assemble branch instructions (beq, bne)
     fn assemble_branch(&self, opcode: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 5 {
@@ -1507,21 +1630,21 @@ impl Assembler {
                 self.current_line,
             ));
         }
-        
+
         match (&operands[0], &operands[2], &operands[4]) {
             (Token::Register(rs), Token::Register(rt), Token::Symbol(symbol)) => {
                 // Look up symbol value
                 if let Some(&addr) = self.labels.get(symbol) {
                     // Calculate offset for PC-relative addressing
                     let offset = (addr as i32 - (self.current_address as i32 + 4)) / 4;
-                    
+
                     if offset < -32768 || offset > 32767 {
                         return Err(AssemblerError::RangeError(
                             format!("Branch target out of range: {}", offset),
                             self.current_line,
                         ));
                     }
-                    
+
                     // opcode (6 bits) | rs (5 bits) | rt (5 bits) | offset (16 bits)
                     Ok((opcode << 26) | (*rs << 21) | (*rt << 16) | (offset as u32 & 0xFFFF))
                 } else {
@@ -1538,7 +1661,7 @@ impl Assembler {
                         self.current_line,
                     ));
                 }
-                
+
                 // opcode (6 bits) | rs (5 bits) | rt (5 bits) | offset (16 bits)
                 Ok((opcode << 26) | (*rs << 21) | (*rt << 16) | (*offset as u32 & 0xFFFF))
             },
@@ -1548,7 +1671,7 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble branch zero instructions (bgtz, blez)
     fn assemble_branch_z(&self, opcode: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
@@ -1557,21 +1680,21 @@ impl Assembler {
                 self.current_line,
             ));
         }
-        
+
         match (&operands[0], &operands[2]) {
             (Token::Register(rs), Token::Symbol(symbol)) => {
                 // Look up symbol value
                 if let Some(&addr) = self.labels.get(symbol) {
                     // Calculate offset for PC-relative addressing
                     let offset = (addr as i32 - (self.current_address as i32 + 4)) / 4;
-                    
+
                     if offset < -32768 || offset > 32767 {
                         return Err(AssemblerError::RangeError(
                             format!("Branch target out of range: {}", offset),
                             self.current_line,
                         ));
                     }
-                    
+
                     // opcode (6 bits) | rs (5 bits) | rt (5 bits) | offset (16 bits)
                     Ok((opcode << 26) | (*rs << 21) | (0 << 16) | (offset as u32 & 0xFFFF))
                 } else {
@@ -1588,7 +1711,7 @@ impl Assembler {
                         self.current_line,
                     ));
                 }
-                
+
                 // opcode (6 bits) | rs (5 bits) | rt (5 bits) | offset (16 bits)
                 Ok((opcode << 26) | (*rs << 21) | (0 << 16) | (*offset as u32 & 0xFFFF))
             },
@@ -1598,30 +1721,35 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble branch zero instructions with rt field (bgez, bltz)
-    fn assemble_branch_z_rt(&self, opcode: u32, rt: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
+    fn assemble_branch_z_rt(
+        &self,
+        opcode: u32,
+        rt: u32,
+        operands: &[Token],
+    ) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
             return Err(AssemblerError::SyntaxError(
                 "Branch instruction requires a register and a label".to_string(),
                 self.current_line,
             ));
         }
-        
+
         match (&operands[0], &operands[2]) {
             (Token::Register(rs), Token::Symbol(symbol)) => {
                 // Look up symbol value
                 if let Some(&addr) = self.labels.get(symbol) {
                     // Calculate offset for PC-relative addressing
                     let offset = (addr as i32 - (self.current_address as i32 + 4)) / 4;
-                    
+
                     if offset < -32768 || offset > 32767 {
                         return Err(AssemblerError::RangeError(
                             format!("Branch target out of range: {}", offset),
                             self.current_line,
                         ));
                     }
-                    
+
                     // opcode (6 bits) | rs (5 bits) | rt (5 bits) | offset (16 bits)
                     Ok((opcode << 26) | (*rs << 21) | (rt << 16) | (offset as u32 & 0xFFFF))
                 } else {
@@ -1638,7 +1766,7 @@ impl Assembler {
                         self.current_line,
                     ));
                 }
-                
+
                 // opcode (6 bits) | rs (5 bits) | rt (5 bits) | offset (16 bits)
                 Ok((opcode << 26) | (*rs << 21) | (rt << 16) | (*offset as u32 & 0xFFFF))
             },
@@ -1648,7 +1776,7 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble jump instructions (j, jal)
     fn assemble_jump(&self, opcode: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.is_empty() {
@@ -1657,7 +1785,7 @@ impl Assembler {
                 self.current_line,
             ));
         }
-        
+
         match &operands[0] {
             Token::Symbol(symbol) => {
                 // Look up symbol value
@@ -1668,7 +1796,7 @@ impl Assembler {
                             self.current_line,
                         ));
                     }
-                    
+
                     // opcode (6 bits) | target (26 bits)
                     Ok((opcode << 26) | ((addr >> 2) & 0x3FFFFFF))
                 } else {
@@ -1680,14 +1808,14 @@ impl Assembler {
             },
             Token::Immediate(addr) => {
                 let addr = *addr as u32;
-                
+
                 if addr % 4 != 0 {
                     return Err(AssemblerError::RangeError(
                         format!("Jump target not word-aligned: 0x{:08X}", addr),
                         self.current_line,
                     ));
                 }
-                
+
                 // opcode (6 bits) | target (26 bits)
                 Ok((opcode << 26) | ((addr >> 2) & 0x3FFFFFF))
             },
@@ -1697,16 +1825,21 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble mult/div instructions
-    fn assemble_mult_div(&self, opcode: u32, funct: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
+    fn assemble_mult_div(
+        &self,
+        opcode: u32,
+        funct: u32,
+        operands: &[Token],
+    ) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
             return Err(AssemblerError::SyntaxError(
                 "MULT/DIV instruction requires two registers".to_string(),
                 self.current_line,
             ));
         }
-        
+
         match (&operands[0], &operands[2]) {
             (Token::Register(rs), Token::Register(rt)) => {
                 // opcode (6 bits) | rs (5 bits) | rt (5 bits) | 0 (10 bits) | funct (6 bits)
@@ -1718,16 +1851,21 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble mfhi/mflo instructions
-    fn assemble_mf(&self, opcode: u32, funct: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
+    fn assemble_mf(
+        &self,
+        opcode: u32,
+        funct: u32,
+        operands: &[Token],
+    ) -> Result<u32, AssemblerError> {
         if operands.is_empty() {
             return Err(AssemblerError::SyntaxError(
                 "MFHI/MFLO instruction requires a register".to_string(),
                 self.current_line,
             ));
         }
-        
+
         match &operands[0] {
             Token::Register(rd) => {
                 // opcode (6 bits) | 0 (10 bits) | rd (5 bits) | 0 (5 bits) | funct (6 bits)
@@ -1739,16 +1877,21 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble mthi/mtlo instructions
-    fn assemble_mt(&self, opcode: u32, funct: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
+    fn assemble_mt(
+        &self,
+        opcode: u32,
+        funct: u32,
+        operands: &[Token],
+    ) -> Result<u32, AssemblerError> {
         if operands.is_empty() {
             return Err(AssemblerError::SyntaxError(
                 "MTHI/MTLO instruction requires a register".to_string(),
                 self.current_line,
             ));
         }
-        
+
         match &operands[0] {
             Token::Register(rs) => {
                 // opcode (6 bits) | rs (5 bits) | 0 (15 bits) | funct (6 bits)
@@ -1760,13 +1903,13 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble syscall instruction
     fn assemble_syscall(&self) -> Result<u32, AssemblerError> {
         // opcode (6 bits) | 0 (20 bits) | funct (6 bits)
         Ok((0 << 26) | (0 << 6) | 0x0C)
     }
-    
+
     // Assemble break instruction
     fn assemble_break(&self, operands: &[Token]) -> Result<u32, AssemblerError> {
         let code = if !operands.is_empty() {
@@ -1785,11 +1928,11 @@ impl Assembler {
         } else {
             0
         };
-        
+
         // opcode (6 bits) | code (20 bits) | funct (6 bits)
         Ok((0 << 26) | (code << 6) | 0x0D)
     }
-    
+
     // Assemble move pseudo-instruction (move $rd, $rs)
     fn assemble_move(&self, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
@@ -1798,7 +1941,7 @@ impl Assembler {
                 self.current_line,
             ));
         }
-        
+
         match (&operands[0], &operands[2]) {
             (Token::Register(rd), Token::Register(rs)) => {
                 // Translate to "addu $rd, $zero, $rs"
@@ -1811,7 +1954,7 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble load immediate pseudo-instruction (li $rt, imm)
     fn assemble_li(&self, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
@@ -1820,7 +1963,7 @@ impl Assembler {
                 self.current_line,
             ));
         }
-        
+
         match (&operands[0], &operands[2]) {
             (Token::Register(rt), Token::Immediate(imm)) => {
                 if *imm >= -32768 && *imm <= 32767 {
@@ -1832,14 +1975,17 @@ impl Assembler {
                     // This case is tricky since we can't return two instructions
                     // For now, just return the first instruction and rely on the assembler to expand this
                     let upper = (*imm >> 16) & 0xFFFF;
-                    
+
                     // First instruction: "lui $rt, upper"
                     // opcode (6 bits) | 0 (5 bits) | rt (5 bits) | upper (16 bits)
                     let lui = (0x0F << 26) | (0 << 21) | (*rt << 16) | (upper as u32 & 0xFFFF);
-                    
+
                     // Warn about truncated expansion
-                    println!("Warning: LI expansion truncated to first instruction at line {}", self.current_line);
-                    
+                    println!(
+                        "Warning: LI expansion truncated to first instruction at line {}",
+                        self.current_line
+                    );
+
                     Ok(lui)
                 }
             },
@@ -1849,7 +1995,7 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble load address pseudo-instruction (la $rt, symbol)
     fn assemble_la(&self, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
@@ -1858,20 +2004,23 @@ impl Assembler {
                 self.current_line,
             ));
         }
-        
+
         match (&operands[0], &operands[2]) {
             (Token::Register(rt), Token::Symbol(symbol)) => {
                 // Look up symbol value
                 if let Some(&addr) = self.labels.get(symbol) {
                     let upper = (addr >> 16) & 0xFFFF;
-                    
+
                     // First instruction: "lui $rt, upper"
                     // opcode (6 bits) | 0 (5 bits) | rt (5 bits) | upper (16 bits)
                     let lui = (0x0F << 26) | (0 << 21) | (*rt << 16) | (upper as u32);
-                    
+
                     // Warn about truncated expansion
-                    println!("Warning: LA expansion truncated to first instruction at line {}", self.current_line);
-                    
+                    println!(
+                        "Warning: LA expansion truncated to first instruction at line {}",
+                        self.current_line
+                    );
+
                     Ok(lui)
                 } else {
                     Err(AssemblerError::SymbolError(
@@ -1886,7 +2035,7 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble branch unconditional pseudo-instruction (b label)
     fn assemble_b(&self, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.is_empty() {
@@ -1895,21 +2044,21 @@ impl Assembler {
                 self.current_line,
             ));
         }
-        
+
         match &operands[0] {
             Token::Symbol(symbol) => {
                 // Look up symbol value
                 if let Some(&addr) = self.labels.get(symbol) {
                     // Calculate offset for PC-relative addressing
                     let offset = (addr as i32 - (self.current_address as i32 + 4)) / 4;
-                    
+
                     if offset < -32768 || offset > 32767 {
                         return Err(AssemblerError::RangeError(
                             format!("Branch target out of range: {}", offset),
                             self.current_line,
                         ));
                     }
-                    
+
                     // Translate to "beq $zero, $zero, offset"
                     // opcode (6 bits) | zero (5 bits) | zero (5 bits) | offset (16 bits)
                     Ok((0x04 << 26) | (0 << 21) | (0 << 16) | (offset as u32 & 0xFFFF))
@@ -1926,16 +2075,22 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble FP R-type instruction
-    fn assemble_fp_r_type(&self, opcode: u32, fmt: u32, funct: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
+    fn assemble_fp_r_type(
+        &self,
+        opcode: u32,
+        fmt: u32,
+        funct: u32,
+        operands: &[Token],
+    ) -> Result<u32, AssemblerError> {
         if operands.len() < 5 {
             return Err(AssemblerError::SyntaxError(
                 "FP R-type instruction requires 3 FP registers".to_string(),
                 self.current_line,
             ));
         }
-        
+
         match (&operands[0], &operands[2], &operands[4]) {
             (Token::FpRegister(fd), Token::FpRegister(fs), Token::FpRegister(ft)) => {
                 // opcode (6 bits) | fmt (5 bits) | ft (5 bits) | fs (5 bits) | fd (5 bits) | funct (6 bits)
@@ -1947,16 +2102,22 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble FP R-type instruction with only fd and fs
-    fn assemble_fp_r_type_fs(&self, opcode: u32, fmt: u32, funct: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
+    fn assemble_fp_r_type_fs(
+        &self,
+        opcode: u32,
+        fmt: u32,
+        funct: u32,
+        operands: &[Token],
+    ) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
             return Err(AssemblerError::SyntaxError(
                 "FP R-type instruction requires 2 FP registers".to_string(),
                 self.current_line,
             ));
         }
-        
+
         match (&operands[0], &operands[2]) {
             (Token::FpRegister(fd), Token::FpRegister(fs)) => {
                 // opcode (6 bits) | fmt (5 bits) | 0 (5 bits) | fs (5 bits) | fd (5 bits) | funct (6 bits)
@@ -1968,21 +2129,34 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble FP compare instruction
-    fn assemble_fp_cmp(&self, opcode: u32, fmt: u32, funct: u32, cond: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
+    fn assemble_fp_cmp(
+        &self,
+        opcode: u32,
+        fmt: u32,
+        funct: u32,
+        cond: u32,
+        operands: &[Token],
+    ) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
             return Err(AssemblerError::SyntaxError(
                 "FP compare instruction requires 2 FP registers".to_string(),
                 self.current_line,
             ));
         }
-        
+
         match (&operands[0], &operands[2]) {
             (Token::FpRegister(fs), Token::FpRegister(ft)) => {
                 // opcode (6 bits) | fmt (5 bits) | ft (5 bits) | fs (5 bits) | cc (3 bits) | 0 (2 bits) | funct (6 bits)
                 let cc = 0; // Use condition code 0
-                Ok((opcode << 26) | (fmt << 21) | (*ft << 16) | (*fs << 11) | (cc << 8) | (cond << 4) | funct)
+                Ok((opcode << 26)
+                    | (fmt << 21)
+                    | (*ft << 16)
+                    | (*fs << 11)
+                    | (cc << 8)
+                    | (cond << 4)
+                    | funct)
             },
             _ => Err(AssemblerError::SyntaxError(
                 "Invalid operands for FP compare instruction".to_string(),
@@ -1990,21 +2164,25 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble FP load/store instructions
-    fn assemble_fp_load_store(&self, opcode: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
+    fn assemble_fp_load_store(
+        &self,
+        opcode: u32,
+        operands: &[Token],
+    ) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
             return Err(AssemblerError::SyntaxError(
                 "FP load/store instruction requires a register and an address".to_string(),
                 self.current_line,
             ));
         }
-        
+
         match &operands[0] {
             Token::FpRegister(ft) => {
                 // Parse the address operand
                 let (base, offset) = self.parse_address(&operands[1..])?;
-                
+
                 // opcode (6 bits) | base (5 bits) | ft (5 bits) | offset (16 bits)
                 Ok((opcode << 26) | (base << 21) | (*ft << 16) | (offset as u32 & 0xFFFF))
             },
@@ -2014,35 +2192,38 @@ impl Assembler {
             )),
         }
     }
-    
+
     // Assemble FP branch instructions
-    fn assemble_fp_branch(&self, opcode: u32, fmt: u32, nd: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
+    fn assemble_fp_branch(
+        &self,
+        opcode: u32,
+        fmt: u32,
+        rt: u32,
+        operands: &[Token],
+    ) -> Result<u32, AssemblerError> {
         if operands.is_empty() {
             return Err(AssemblerError::SyntaxError(
                 "FP branch instruction requires a label".to_string(),
                 self.current_line,
             ));
         }
-        
+
         match &operands[0] {
             Token::Symbol(symbol) => {
                 // Look up symbol value
                 if let Some(&addr) = self.labels.get(symbol) {
                     // Calculate offset for PC-relative addressing
                     let offset = (addr as i32 - (self.current_address as i32 + 4)) / 4;
-                    
+
                     if offset < -32768 || offset > 32767 {
                         return Err(AssemblerError::RangeError(
                             format!("Branch target out of range: {}", offset),
                             self.current_line,
                         ));
                     }
-                    
-                    // opcode (6 bits) | fmt (5 bits) | nd (1 bit) | tf (1 bit) | 0 (3 bits) | offset (16 bits)
-                    let tf = nd; // tf is 1 for BC1T, 0 for BC1F
-                    let cc = 0; // Use condition code 0
-                    
-                    Ok((opcode << 26) | (fmt << 21) | (cc << 18) | (nd << 17) | (tf << 16) | (offset as u32 & 0xFFFF))
+
+                    // opcode (6 bits) | fmt (5 bits) | rt (5 bits) | offset (16 bits)
+                    Ok((opcode << 26) | (fmt << 21) | (rt << 16) | (offset as u32 & 0xFFFF))
                 } else {
                     Err(AssemblerError::SymbolError(
                         format!("Undefined symbol: {}", symbol),
@@ -2050,68 +2231,10 @@ impl Assembler {
                     ))
                 }
             },
-            Token::Immediate(offset) => {
-                if *offset < -32768 || *offset > 32767 {
-                    return Err(AssemblerError::RangeError(
-                        format!("Branch offset out of range: {}", offset),
-                        self.current_line,
-                    ));
-                }
-                
-                // opcode (6 bits) | fmt (5 bits) | nd (1 bit) | tf (1 bit) | 0 (3 bits) | offset (16 bits)
-                let tf = nd; // tf is 1 for BC1T, 0 for BC1F
-                let cc = 0; // Use condition code 0
-                
-                Ok((opcode << 26) | (fmt << 21) | (cc << 18) | (nd << 17) | (tf << 16) | (*offset as u32 & 0xFFFF))
-            },
             _ => Err(AssemblerError::SyntaxError(
                 "Invalid operand for FP branch instruction".to_string(),
                 self.current_line,
             )),
         }
-    }
-}
-
-// Utility functions
-#[allow(dead_code)]
-pub fn assemble_file<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, AssemblerError> {
-    let mut assembler = Assembler::new();
-    assembler.assemble_file(path)
-}
-
-#[allow(dead_code)]
-pub fn assemble_string(code: &str) -> Result<Vec<u8>, AssemblerError> {
-    let mut assembler = Assembler::new();
-    assembler.assemble_string(code)
-}
-
-// Stand-alone executable
-#[cfg(feature = "bin")]
-fn main() {
-    use std::env;
-    use std::fs::File;
-    use std::io::Write;
-    use std::path::Path;
-    
-    let args: Vec<String> = env::args().collect();
-    
-    if args.len() < 2 {
-        println!("Usage: {} <input.s> [output.bin]", args[0]);
-        return;
-    }
-    
-    let input_file = &args[1];
-    let output_file = if args.len() >= 3 { &args[2] } else { "a.out" };
-    
-    match assemble_file(input_file) {
-        Ok(binary) => {
-            let mut file = File::create(output_file).expect("Failed to create output file");
-            file.write_all(&binary).expect("Failed to write output file");
-            println!("Assembled {} to {}", input_file, output_file);
-        },
-        Err(err) => {
-            eprintln!("Assembly error: {}", err);
-            std::process::exit(1);
-        },
     }
 }

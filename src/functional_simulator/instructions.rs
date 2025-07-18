@@ -1,4 +1,30 @@
+// Copyright (c) 2024 Mudit Bhargava
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+
 // instructions.rs
+//
+// This file contains the instruction definitions and execution logic for the
+// MIPS functional simulator. It defines the Instruction enum, which represents
+// all supported MIPS instructions, and the execute method, which implements
+// the behavior of each instruction.
 
 use super::memory::Memory;
 use super::registers::Registers;
@@ -14,16 +40,16 @@ pub enum Instruction {
     Slt { rd: u32, rs: u32, rt: u32 },
     Sll { rd: u32, rt: u32, shamt: u32 },
     Srl { rd: u32, rt: u32, shamt: u32 },
-    
+
     // Original I-type instructions
     Addi { rt: u32, rs: u32, imm: i16 },
     Lw { rt: u32, base: u32, offset: i16 },
     Sw { rt: u32, base: u32, offset: i16 },
     Beq { rs: u32, rt: u32, offset: i16 },
-    
+
     // Original J-type instruction
     J { target: u32 },
-    
+
     // Additional instruction variants previously implemented
     Lui { rt: u32, imm: u16 },
     Ori { rt: u32, rs: u32, imm: u16 },
@@ -32,7 +58,7 @@ pub enum Instruction {
     Addiu { rt: u32, rs: u32, imm: i16 },
     Bne { rs: u32, rt: u32, offset: i16 },
     Jr { rs: u32 },
-    
+
     // New R-type instructions
     Sra { rd: u32, rt: u32, shamt: u32 },
     Sllv { rd: u32, rt: u32, rs: u32 },
@@ -45,7 +71,7 @@ pub enum Instruction {
     Mfhi { rd: u32 },
     Mthi { rs: u32 },
     Mtlo { rs: u32 },
-    
+
     // New I-type instructions
     Andi { rt: u32, rs: u32, imm: u16 },
     Xori { rt: u32, rs: u32, imm: u16 },
@@ -57,17 +83,17 @@ pub enum Instruction {
     Lhu { rt: u32, base: u32, offset: i16 },
     Sb { rt: u32, base: u32, offset: i16 },
     Sh { rt: u32, base: u32, offset: i16 },
-    
+
     // Branch instructions
     Bgtz { rs: u32, offset: i16 },
     Blez { rs: u32, offset: i16 },
     Bltz { rs: u32, offset: i16 },
     Bgez { rs: u32, offset: i16 },
-    
+
     // Jump instruction variants
     Jal { target: u32 },
     Jalr { rd: u32, rs: u32 },
-    
+
     // Floating-point instructions
     AddS { fd: u32, fs: u32, ft: u32 },
     SubS { fd: u32, fs: u32, ft: u32 },
@@ -83,12 +109,12 @@ pub enum Instruction {
     SwC1 { ft: u32, base: u32, offset: i16 },
     BC1T { offset: i16 },
     BC1F { offset: i16 },
-    
+
     // Special instructions
     Syscall,
     Break { code: u32 },
     Nop,
-    
+
     InvalidInstruction,
 }
 
@@ -143,7 +169,7 @@ impl Instruction {
                 registers.write(*rd, result);
                 None
             },
-            
+
             // Original I-type instructions
             Instruction::Addi { rt, rs, imm } => {
                 let rs_value = registers.read(*rs);
@@ -154,20 +180,26 @@ impl Instruction {
             Instruction::Lw { rt, base, offset } => {
                 let base_value = registers.read(*base);
                 let address = base_value.wrapping_add(*offset as u32);
-                
+
                 // Check alignment - MIPS requires word accesses to be aligned
                 if address % 4 != 0 {
-                    println!("Memory alignment exception: address 0x{:08x} not aligned for word access", address);
+                    println!(
+                        "Memory alignment exception: address 0x{:08x} not aligned for word access",
+                        address
+                    );
                     return Some(address); // Return address causing the exception
                 }
-                
+
                 match memory.read_word(address as usize) {
                     Some(value) => {
                         registers.write(*rt, value);
                         None
                     },
                     None => {
-                        println!("Memory access exception: address 0x{:08x} out of bounds", address);
+                        println!(
+                            "Memory access exception: address 0x{:08x} out of bounds",
+                            address
+                        );
                         Some(address)
                     },
                 }
@@ -175,37 +207,49 @@ impl Instruction {
             Instruction::Sw { rt, base, offset } => {
                 let base_value = registers.read(*base);
                 let address = base_value.wrapping_add(*offset as u32);
-                
+
                 // Check alignment - MIPS requires word accesses to be aligned
                 if address % 4 != 0 {
-                    println!("Memory alignment exception: address 0x{:08x} not aligned for word access", address);
+                    println!(
+                        "Memory alignment exception: address 0x{:08x} not aligned for word access",
+                        address
+                    );
                     return Some(address); // Return address causing the exception
                 }
-                
+
                 let value = registers.read(*rt);
                 if memory.write_word(address as usize, value) {
                     None
                 } else {
-                    println!("Memory access exception: address 0x{:08x} out of bounds", address);
+                    println!(
+                        "Memory access exception: address 0x{:08x} out of bounds",
+                        address
+                    );
                     Some(address)
                 }
             },
             Instruction::Beq { rs, rt, offset } => {
                 let rs_value = registers.read(*rs);
                 let rt_value = registers.read(*rt);
-                
+
                 if rs_value == rt_value {
-                    println!("BEQ: (${} == ${}): {} == {} - Branch taken", rs, rt, rs_value, rt_value);
+                    println!(
+                        "BEQ: (${} == ${}): {} == {} - Branch taken",
+                        rs, rt, rs_value, rt_value
+                    );
                     Some((*offset as u32) << 2)
                 } else {
-                    println!("BEQ: (${} == ${}): {} != {} - Branch NOT taken", rs, rt, rs_value, rt_value);
+                    println!(
+                        "BEQ: (${} == ${}): {} != {} - Branch NOT taken",
+                        rs, rt, rs_value, rt_value
+                    );
                     None
                 }
             },
-            
+
             // Original J-type instruction
             Instruction::J { target } => Some(*target),
-            
+
             // Previously implemented instructions
             Instruction::Lui { rt, imm } => {
                 let value = (*imm as u32) << 16;
@@ -222,7 +266,7 @@ impl Instruction {
                 let rs_value = registers.read(*rs) as i32;
                 let rt_value = registers.read(*rt) as i32;
                 let result = rs_value.wrapping_mul(rt_value) as i64;
-                
+
                 registers.set_lo((result & 0xFFFFFFFF) as u32);
                 registers.set_hi(((result >> 32) & 0xFFFFFFFF) as u32);
                 None
@@ -251,7 +295,7 @@ impl Instruction {
                 let target_address = registers.read(*rs);
                 Some(target_address)
             },
-            
+
             // New R-type instructions implementations
             Instruction::Sra { rd, rt, shamt } => {
                 let rt_value = registers.read(*rt) as i32;
@@ -283,7 +327,7 @@ impl Instruction {
             Instruction::Div { rs, rt } => {
                 let rs_value = registers.read(*rs) as i32;
                 let rt_value = registers.read(*rt) as i32;
-                
+
                 // Check for division by zero
                 if rt_value == 0 {
                     // In hardware this would be undefined behavior
@@ -301,7 +345,7 @@ impl Instruction {
             Instruction::Divu { rs, rt } => {
                 let rs_value = registers.read(*rs);
                 let rt_value = registers.read(*rt);
-                
+
                 // Check for division by zero
                 if rt_value == 0 {
                     registers.set_lo(0);
@@ -343,7 +387,7 @@ impl Instruction {
                 registers.set_lo(rs_value);
                 None
             },
-            
+
             // New I-type instruction implementations
             Instruction::Andi { rt, rs, imm } => {
                 let rs_value = registers.read(*rs);
@@ -399,13 +443,13 @@ impl Instruction {
             Instruction::Lh { rt, base, offset } => {
                 let base_value = registers.read(*base);
                 let address = base_value.wrapping_add(*offset as u32);
-                
+
                 // Check alignment - MIPS requires halfword accesses to be aligned
                 if address % 2 != 0 {
                     println!("Memory alignment exception: address 0x{:08x} not aligned for halfword access", address);
                     return Some(address); // Return address causing the exception
                 }
-                
+
                 if address as usize + 1 < memory.size {
                     let low_byte = memory.read_byte(address as usize).unwrap_or(0);
                     let high_byte = memory.read_byte((address as usize) + 1).unwrap_or(0);
@@ -415,20 +459,23 @@ impl Instruction {
                     registers.write(*rt, sign_extended);
                     None
                 } else {
-                    println!("Memory access exception: address 0x{:08x} out of bounds", address);
+                    println!(
+                        "Memory access exception: address 0x{:08x} out of bounds",
+                        address
+                    );
                     Some(address)
                 }
             },
             Instruction::Lhu { rt, base, offset } => {
                 let base_value = registers.read(*base);
                 let address = base_value.wrapping_add(*offset as u32);
-                
+
                 // Check alignment - MIPS requires halfword accesses to be aligned
                 if address % 2 != 0 {
                     println!("Memory alignment exception: address 0x{:08x} not aligned for halfword access", address);
                     return Some(address); // Return address causing the exception
                 }
-                
+
                 if address as usize + 1 < memory.size {
                     let low_byte = memory.read_byte(address as usize).unwrap_or(0);
                     let high_byte = memory.read_byte((address as usize) + 1).unwrap_or(0);
@@ -437,7 +484,10 @@ impl Instruction {
                     registers.write(*rt, halfword as u32);
                     None
                 } else {
-                    println!("Memory access exception: address 0x{:08x} out of bounds", address);
+                    println!(
+                        "Memory access exception: address 0x{:08x} out of bounds",
+                        address
+                    );
                     Some(address)
                 }
             },
@@ -448,20 +498,23 @@ impl Instruction {
                 if memory.write_byte(address as usize, value) {
                     None
                 } else {
-                    println!("Memory access exception: address 0x{:08x} out of bounds", address);
+                    println!(
+                        "Memory access exception: address 0x{:08x} out of bounds",
+                        address
+                    );
                     Some(address)
                 }
             },
             Instruction::Sh { rt, base, offset } => {
                 let base_value = registers.read(*base);
                 let address = base_value.wrapping_add(*offset as u32);
-                
+
                 // Check alignment - MIPS requires halfword accesses to be aligned
                 if address % 2 != 0 {
                     println!("Memory alignment exception: address 0x{:08x} not aligned for halfword access", address);
                     return Some(address); // Return address causing the exception
                 }
-                
+
                 let value = registers.read(*rt) as u16;
                 if address as usize + 1 < memory.size {
                     let low_byte = value as u8;
@@ -473,7 +526,7 @@ impl Instruction {
                     Some(address)
                 }
             },
-            
+
             // Branch instructions
             Instruction::Bgtz { rs, offset } => {
                 let rs_value = registers.read(*rs) as i32;
@@ -507,7 +560,7 @@ impl Instruction {
                     None
                 }
             },
-            
+
             // Jump instruction variants
             Instruction::Jal { target } => {
                 // Store return address in $ra (register 31)
@@ -520,7 +573,7 @@ impl Instruction {
                 // Jump to address in rs
                 Some(registers.read(*rs))
             },
-            
+
             // Floating-point instructions
             Instruction::AddS { fd, fs, ft } => {
                 let fs_value = registers.read_float(*fs);
@@ -595,15 +648,15 @@ impl Instruction {
                 let fs_value = registers.read_float(*fs);
                 let ft_value = registers.read_float(*ft);
                 let mut condition_bit = false;
-                
+
                 match cond {
                     0 => condition_bit = fs_value == ft_value, // EQ
                     1 => condition_bit = fs_value < ft_value,  // LT
                     2 => condition_bit = fs_value <= ft_value, // LE
                     // Add other condition codes as needed
-                    _ => {}
+                    _ => {},
                 }
-                
+
                 // Set condition flag in fcsr
                 if condition_bit {
                     registers.fcsr |= 0x800000; // Set condition bit
@@ -651,45 +704,43 @@ impl Instruction {
                     None
                 }
             },
-            
+
             // Special instructions
-            Instruction::Syscall => {
-                handle_syscall(registers, memory)
-            },
+            Instruction::Syscall => handle_syscall(registers, memory),
             Instruction::Break { code: _ } => {
                 // Normally would trigger debugger, but for our simulator we'll just print a message
                 println!("Breakpoint encountered at PC: 0x{:08X}", registers.pc);
                 None
             },
             Instruction::Nop => None,
-            
+
             Instruction::InvalidInstruction => None,
         }
     }
 
     pub fn get_address(&self, registers: &Registers, pc: u32) -> u32 {
         match self {
-            Instruction::Lw { base, offset, .. } | 
-            Instruction::Sw { base, offset, .. } |
-            Instruction::Lb { base, offset, .. } |
-            Instruction::Lh { base, offset, .. } |
-            Instruction::Lbu { base, offset, .. } |
-            Instruction::Lhu { base, offset, .. } |
-            Instruction::Sb { base, offset, .. } |
-            Instruction::Sh { base, offset, .. } |
-            Instruction::LwC1 { base, offset, .. } |
-            Instruction::SwC1 { base, offset, .. } => {
+            Instruction::Lw { base, offset, .. }
+            | Instruction::Sw { base, offset, .. }
+            | Instruction::Lb { base, offset, .. }
+            | Instruction::Lh { base, offset, .. }
+            | Instruction::Lbu { base, offset, .. }
+            | Instruction::Lhu { base, offset, .. }
+            | Instruction::Sb { base, offset, .. }
+            | Instruction::Sh { base, offset, .. }
+            | Instruction::LwC1 { base, offset, .. }
+            | Instruction::SwC1 { base, offset, .. } => {
                 let base_value = registers.read(*base);
                 base_value.wrapping_add(*offset as u32)
             },
-            Instruction::Beq { offset, .. } | 
-            Instruction::Bne { offset, .. } |
-            Instruction::Bgtz { offset, .. } |
-            Instruction::Blez { offset, .. } |
-            Instruction::Bltz { offset, .. } |
-            Instruction::Bgez { offset, .. } |
-            Instruction::BC1T { offset } |
-            Instruction::BC1F { offset } => {
+            Instruction::Beq { offset, .. }
+            | Instruction::Bne { offset, .. }
+            | Instruction::Bgtz { offset, .. }
+            | Instruction::Blez { offset, .. }
+            | Instruction::Bltz { offset, .. }
+            | Instruction::Bgez { offset, .. }
+            | Instruction::BC1T { offset }
+            | Instruction::BC1F { offset } => {
                 // PC-relative addressing: PC + 4 + (offset << 2)
                 pc.wrapping_add(4).wrapping_add((*offset as u32) << 2)
             },
@@ -706,133 +757,134 @@ impl Instruction {
     }
 
     pub fn generates_result(&self) -> bool {
-        matches!(self,
-            Instruction::Add { .. } |
-            Instruction::Sub { .. } |
-            Instruction::And { .. } |
-            Instruction::Or { .. } |
-            Instruction::Xor { .. } |
-            Instruction::Nor { .. } |
-            Instruction::Slt { .. } |
-            Instruction::Slti { .. } |
-            Instruction::Sltiu { .. } |
-            Instruction::Sll { .. } |
-            Instruction::Srl { .. } |
-            Instruction::Sra { .. } |
-            Instruction::Sllv { .. } |
-            Instruction::Srlv { .. } |
-            Instruction::Srav { .. } |
-            Instruction::Addi { .. } |
-            Instruction::Addiu { .. } |
-            Instruction::Lui { .. } |
-            Instruction::Ori { .. } |
-            Instruction::Andi { .. } |
-            Instruction::Xori { .. } |
-            Instruction::Lw { .. } |
-            Instruction::Lb { .. } |
-            Instruction::Lbu { .. } |
-            Instruction::Lh { .. } |
-            Instruction::Lhu { .. } |
-            Instruction::Mflo { .. } |
-            Instruction::Mfhi { .. } |
-            Instruction::LwC1 { .. } |
-            Instruction::AddS { .. } |
-            Instruction::SubS { .. } |
-            Instruction::MulS { .. } |
-            Instruction::DivS { .. } |
-            Instruction::AbsS { .. } |
-            Instruction::NegS { .. } |
-            Instruction::MovS { .. } |
-            Instruction::CvtSW { .. } |
-            Instruction::CvtWS { .. }
+        matches!(
+            self,
+            Instruction::Add { .. }
+                | Instruction::Sub { .. }
+                | Instruction::And { .. }
+                | Instruction::Or { .. }
+                | Instruction::Xor { .. }
+                | Instruction::Nor { .. }
+                | Instruction::Slt { .. }
+                | Instruction::Slti { .. }
+                | Instruction::Sltiu { .. }
+                | Instruction::Sll { .. }
+                | Instruction::Srl { .. }
+                | Instruction::Sra { .. }
+                | Instruction::Sllv { .. }
+                | Instruction::Srlv { .. }
+                | Instruction::Srav { .. }
+                | Instruction::Addi { .. }
+                | Instruction::Addiu { .. }
+                | Instruction::Lui { .. }
+                | Instruction::Ori { .. }
+                | Instruction::Andi { .. }
+                | Instruction::Xori { .. }
+                | Instruction::Lw { .. }
+                | Instruction::Lb { .. }
+                | Instruction::Lbu { .. }
+                | Instruction::Lh { .. }
+                | Instruction::Lhu { .. }
+                | Instruction::Mflo { .. }
+                | Instruction::Mfhi { .. }
+                | Instruction::LwC1 { .. }
+                | Instruction::AddS { .. }
+                | Instruction::SubS { .. }
+                | Instruction::MulS { .. }
+                | Instruction::DivS { .. }
+                | Instruction::AbsS { .. }
+                | Instruction::NegS { .. }
+                | Instruction::MovS { .. }
+                | Instruction::CvtSW { .. }
+                | Instruction::CvtWS { .. }
         )
     }
 
     pub fn get_destination_register(&self) -> Option<u32> {
         match self {
-            Instruction::Add { rd, .. } |
-            Instruction::Sub { rd, .. } |
-            Instruction::And { rd, .. } |
-            Instruction::Or { rd, .. } |
-            Instruction::Xor { rd, .. } |
-            Instruction::Nor { rd, .. } |
-            Instruction::Slt { rd, .. } |
-            Instruction::Sll { rd, .. } |
-            Instruction::Srl { rd, .. } |
-            Instruction::Sra { rd, .. } |
-            Instruction::Sllv { rd, .. } |
-            Instruction::Srlv { rd, .. } |
-            Instruction::Srav { rd, .. } |
-            Instruction::Mflo { rd } |
-            Instruction::Mfhi { rd } |
-            Instruction::Jalr { rd, .. } => Some(*rd),
-            
-            Instruction::Addi { rt, .. } |
-            Instruction::Addiu { rt, .. } |
-            Instruction::Slti { rt, .. } |
-            Instruction::Sltiu { rt, .. } |
-            Instruction::Andi { rt, .. } |
-            Instruction::Ori { rt, .. } |
-            Instruction::Xori { rt, .. } |
-            Instruction::Lui { rt, .. } |
-            Instruction::Lw { rt, .. } |
-            Instruction::Lb { rt, .. } |
-            Instruction::Lbu { rt, .. } |
-            Instruction::Lh { rt, .. } |
-            Instruction::Lhu { rt, .. } => Some(*rt),
-            
+            Instruction::Add { rd, .. }
+            | Instruction::Sub { rd, .. }
+            | Instruction::And { rd, .. }
+            | Instruction::Or { rd, .. }
+            | Instruction::Xor { rd, .. }
+            | Instruction::Nor { rd, .. }
+            | Instruction::Slt { rd, .. }
+            | Instruction::Sll { rd, .. }
+            | Instruction::Srl { rd, .. }
+            | Instruction::Sra { rd, .. }
+            | Instruction::Sllv { rd, .. }
+            | Instruction::Srlv { rd, .. }
+            | Instruction::Srav { rd, .. }
+            | Instruction::Mflo { rd }
+            | Instruction::Mfhi { rd }
+            | Instruction::Jalr { rd, .. } => Some(*rd),
+
+            Instruction::Addi { rt, .. }
+            | Instruction::Addiu { rt, .. }
+            | Instruction::Slti { rt, .. }
+            | Instruction::Sltiu { rt, .. }
+            | Instruction::Andi { rt, .. }
+            | Instruction::Ori { rt, .. }
+            | Instruction::Xori { rt, .. }
+            | Instruction::Lui { rt, .. }
+            | Instruction::Lw { rt, .. }
+            | Instruction::Lb { rt, .. }
+            | Instruction::Lbu { rt, .. }
+            | Instruction::Lh { rt, .. }
+            | Instruction::Lhu { rt, .. } => Some(*rt),
+
             Instruction::Jal { .. } => Some(31), // $ra
-            
+
             // FP instructions
-            Instruction::AddS { fd, .. } |
-            Instruction::SubS { fd, .. } |
-            Instruction::MulS { fd, .. } |
-            Instruction::DivS { fd, .. } |
-            Instruction::AbsS { fd, .. } |
-            Instruction::NegS { fd, .. } |
-            Instruction::MovS { fd, .. } |
-            Instruction::CvtSW { fd, .. } |
-            Instruction::CvtWS { fd, .. } => Some(*fd),
-            
+            Instruction::AddS { fd, .. }
+            | Instruction::SubS { fd, .. }
+            | Instruction::MulS { fd, .. }
+            | Instruction::DivS { fd, .. }
+            | Instruction::AbsS { fd, .. }
+            | Instruction::NegS { fd, .. }
+            | Instruction::MovS { fd, .. }
+            | Instruction::CvtSW { fd, .. }
+            | Instruction::CvtWS { fd, .. } => Some(*fd),
+
             Instruction::LwC1 { ft, .. } => Some(*ft), // FP registers are accessed directly
-            
+
             _ => None,
         }
     }
 
     pub fn get_source_registers(&self) -> Vec<u32> {
         match self {
-            Instruction::Add { rs, rt, .. } |
-            Instruction::Sub { rs, rt, .. } |
-            Instruction::And { rs, rt, .. } |
-            Instruction::Or { rs, rt, .. } |
-            Instruction::Xor { rs, rt, .. } |
-            Instruction::Nor { rs, rt, .. } |
-            Instruction::Slt { rs, rt, .. } => vec![*rs, *rt],
-            
-            Instruction::Sll { rt, .. } |
-            Instruction::Srl { rt, .. } |
-            Instruction::Sra { rt, .. } => vec![*rt],
-            
-            Instruction::Sllv { rs, rt, .. } |
-            Instruction::Srlv { rs, rt, .. } |
-            Instruction::Srav { rs, rt, .. } => vec![*rs, *rt],
-            
-            Instruction::Addi { rs, .. } |
-            Instruction::Addiu { rs, .. } |
-            Instruction::Slti { rs, .. } |
-            Instruction::Sltiu { rs, .. } |
-            Instruction::Andi { rs, .. } |
-            Instruction::Ori { rs, .. } |
-            Instruction::Xori { rs, .. } => vec![*rs],
-            
-            Instruction::Lw { base, .. } |
-            Instruction::Lb { base, .. } |
-            Instruction::Lbu { base, .. } |
-            Instruction::Lh { base, .. } |
-            Instruction::Lhu { base, .. } |
-            Instruction::LwC1 { base, .. } => vec![*base],
-            
+            Instruction::Add { rs, rt, .. }
+            | Instruction::Sub { rs, rt, .. }
+            | Instruction::And { rs, rt, .. }
+            | Instruction::Or { rs, rt, .. }
+            | Instruction::Xor { rs, rt, .. }
+            | Instruction::Nor { rs, rt, .. }
+            | Instruction::Slt { rs, rt, .. } => vec![*rs, *rt],
+
+            Instruction::Sll { rt, .. }
+            | Instruction::Srl { rt, .. }
+            | Instruction::Sra { rt, .. } => vec![*rt],
+
+            Instruction::Sllv { rs, rt, .. }
+            | Instruction::Srlv { rs, rt, .. }
+            | Instruction::Srav { rs, rt, .. } => vec![*rs, *rt],
+
+            Instruction::Addi { rs, .. }
+            | Instruction::Addiu { rs, .. }
+            | Instruction::Slti { rs, .. }
+            | Instruction::Sltiu { rs, .. }
+            | Instruction::Andi { rs, .. }
+            | Instruction::Ori { rs, .. }
+            | Instruction::Xori { rs, .. } => vec![*rs],
+
+            Instruction::Lw { base, .. }
+            | Instruction::Lb { base, .. }
+            | Instruction::Lbu { base, .. }
+            | Instruction::Lh { base, .. }
+            | Instruction::Lhu { base, .. }
+            | Instruction::LwC1 { base, .. } => vec![*base],
+
             Instruction::Sw { rt, base, .. } => {
                 if *base == 0 {
                     vec![*rt] // Special case for storing to absolute address
@@ -861,118 +913,122 @@ impl Instruction {
                     vec![*ft, *base]
                 }
             },
-            
-            Instruction::Beq { rs, rt, .. } |
-            Instruction::Bne { rs, rt, .. } => vec![*rs, *rt],
-            
-            Instruction::Bgtz { rs, .. } |
-            Instruction::Blez { rs, .. } |
-            Instruction::Bltz { rs, .. } |
-            Instruction::Bgez { rs, .. } => vec![*rs],
-            
-            Instruction::Jr { rs } |
-            Instruction::Jalr { rs, .. } |
-            Instruction::Mthi { rs } |
-            Instruction::Mtlo { rs } => vec![*rs],
-            
-            Instruction::Mult { rs, rt } |
-            Instruction::Div { rs, rt } |
-            Instruction::Divu { rs, rt } => vec![*rs, *rt],
-            
+
+            Instruction::Beq { rs, rt, .. } | Instruction::Bne { rs, rt, .. } => vec![*rs, *rt],
+
+            Instruction::Bgtz { rs, .. }
+            | Instruction::Blez { rs, .. }
+            | Instruction::Bltz { rs, .. }
+            | Instruction::Bgez { rs, .. } => vec![*rs],
+
+            Instruction::Jr { rs }
+            | Instruction::Jalr { rs, .. }
+            | Instruction::Mthi { rs }
+            | Instruction::Mtlo { rs } => vec![*rs],
+
+            Instruction::Mult { rs, rt }
+            | Instruction::Div { rs, rt }
+            | Instruction::Divu { rs, rt } => vec![*rs, *rt],
+
             // FP instructions
-            Instruction::AddS { fs, ft, .. } |
-            Instruction::SubS { fs, ft, .. } |
-            Instruction::MulS { fs, ft, .. } |
-            Instruction::DivS { fs, ft, .. } |
-            Instruction::CmpS { fs, ft, .. } => vec![*fs, *ft], // FP registers are accessed directly
-            
-            Instruction::AbsS { fs, .. } |
-            Instruction::NegS { fs, .. } |
-            Instruction::MovS { fs, .. } |
-            Instruction::CvtSW { fs, .. } => vec![*fs],
-            
+            Instruction::AddS { fs, ft, .. }
+            | Instruction::SubS { fs, ft, .. }
+            | Instruction::MulS { fs, ft, .. }
+            | Instruction::DivS { fs, ft, .. }
+            | Instruction::CmpS { fs, ft, .. } => vec![*fs, *ft], // FP registers are accessed directly
+
+            Instruction::AbsS { fs, .. }
+            | Instruction::NegS { fs, .. }
+            | Instruction::MovS { fs, .. }
+            | Instruction::CvtSW { fs, .. } => vec![*fs],
+
             Instruction::CvtWS { fs, .. } => vec![*fs],
-            
+
             Instruction::Syscall => {
                 // Syscall uses multiple registers for parameters
                 vec![2, 4, 5, 6, 7]
             },
-            
+
             _ => vec![],
         }
     }
 
     pub fn is_branch_or_jump(&self) -> bool {
-        matches!(self,
-            Instruction::Beq { .. } |
-            Instruction::Bne { .. } |
-            Instruction::Bgtz { .. } |
-            Instruction::Blez { .. } |
-            Instruction::Bltz { .. } |
-            Instruction::Bgez { .. } |
-            Instruction::J { .. } |
-            Instruction::Jal { .. } |
-            Instruction::Jr { .. } |
-            Instruction::Jalr { .. } |
-            Instruction::BC1T { .. } |
-            Instruction::BC1F { .. }
+        matches!(
+            self,
+            Instruction::Beq { .. }
+                | Instruction::Bne { .. }
+                | Instruction::Bgtz { .. }
+                | Instruction::Blez { .. }
+                | Instruction::Bltz { .. }
+                | Instruction::Bgez { .. }
+                | Instruction::J { .. }
+                | Instruction::Jal { .. }
+                | Instruction::Jr { .. }
+                | Instruction::Jalr { .. }
+                | Instruction::BC1T { .. }
+                | Instruction::BC1F { .. }
         )
     }
 
     pub fn is_memory_access(&self) -> bool {
-        matches!(self,
-            Instruction::Lw { .. } |
-            Instruction::Sw { .. } |
-            Instruction::Lb { .. } |
-            Instruction::Lbu { .. } |
-            Instruction::Lh { .. } |
-            Instruction::Lhu { .. } |
-            Instruction::Sb { .. } |
-            Instruction::Sh { .. } |
-            Instruction::LwC1 { .. } |
-            Instruction::SwC1 { .. }
+        matches!(
+            self,
+            Instruction::Lw { .. }
+                | Instruction::Sw { .. }
+                | Instruction::Lb { .. }
+                | Instruction::Lbu { .. }
+                | Instruction::Lh { .. }
+                | Instruction::Lhu { .. }
+                | Instruction::Sb { .. }
+                | Instruction::Sh { .. }
+                | Instruction::LwC1 { .. }
+                | Instruction::SwC1 { .. }
         )
     }
 
     pub fn is_load(&self) -> bool {
-        matches!(self,
-            Instruction::Lw { .. } |
-            Instruction::Lb { .. } |
-            Instruction::Lbu { .. } |
-            Instruction::Lh { .. } |
-            Instruction::Lhu { .. } |
-            Instruction::LwC1 { .. }
+        matches!(
+            self,
+            Instruction::Lw { .. }
+                | Instruction::Lb { .. }
+                | Instruction::Lbu { .. }
+                | Instruction::Lh { .. }
+                | Instruction::Lhu { .. }
+                | Instruction::LwC1 { .. }
         )
     }
 
     pub fn is_store(&self) -> bool {
-        matches!(self,
-            Instruction::Sw { .. } |
-            Instruction::Sb { .. } |
-            Instruction::Sh { .. } |
-            Instruction::SwC1 { .. }
+        matches!(
+            self,
+            Instruction::Sw { .. }
+                | Instruction::Sb { .. }
+                | Instruction::Sh { .. }
+                | Instruction::SwC1 { .. }
         )
     }
 
     pub fn is_fp_instruction(&self) -> bool {
-        matches!(self,
-            Instruction::AddS { .. } |
-            Instruction::SubS { .. } |
-            Instruction::MulS { .. } |
-            Instruction::DivS { .. } |
-            Instruction::AbsS { .. } |
-            Instruction::NegS { .. } |
-            Instruction::MovS { .. } |
-            Instruction::CvtSW { .. } |
-            Instruction::CvtWS { .. } |
-            Instruction::CmpS { .. } |
-            Instruction::LwC1 { .. } |
-            Instruction::SwC1 { .. } |
-            Instruction::BC1T { .. } |
-            Instruction::BC1F { .. }
+        matches!(
+            self,
+            Instruction::AddS { .. }
+                | Instruction::SubS { .. }
+                | Instruction::MulS { .. }
+                | Instruction::DivS { .. }
+                | Instruction::AbsS { .. }
+                | Instruction::NegS { .. }
+                | Instruction::MovS { .. }
+                | Instruction::CvtSW { .. }
+                | Instruction::CvtWS { .. }
+                | Instruction::CmpS { .. }
+                | Instruction::LwC1 { .. }
+                | Instruction::SwC1 { .. }
+                | Instruction::BC1T { .. }
+                | Instruction::BC1F { .. }
         )
     }
-    
+
     /// Gets immediate target address for branch and jump instructions
     /// Returns None for register-based jumps (like JR, JALR) or non-branch/jump instructions
     pub fn get_immediate_target(&self) -> Option<u32> {
@@ -981,20 +1037,20 @@ impl Instruction {
                 // J-type instructions: target << 2 (target is the 26-bit address)
                 Some(*target << 2)
             },
-            Instruction::Beq { offset, .. } |
-            Instruction::Bne { offset, .. } |
-            Instruction::Bgtz { offset, .. } |
-            Instruction::Blez { offset, .. } |
-            Instruction::Bltz { offset, .. } |
-            Instruction::Bgez { offset, .. } |
-            Instruction::BC1T { offset } |
-            Instruction::BC1F { offset } => {
+            Instruction::Beq { offset, .. }
+            | Instruction::Bne { offset, .. }
+            | Instruction::Bgtz { offset, .. }
+            | Instruction::Blez { offset, .. }
+            | Instruction::Bltz { offset, .. }
+            | Instruction::Bgez { offset, .. }
+            | Instruction::BC1T { offset }
+            | Instruction::BC1F { offset } => {
                 // PC-relative branches: PC + 4 + (offset << 2)
                 // Note: This requires the current PC value, which we don't have here
-                // In a full implementation, we'd combine this with the PC from the pipeline stage
+                // TODO : In a full implementation, we'd combine this with the PC from the pipeline stage
                 Some((*offset as u32) << 2)
             },
-            _ => None
+            _ => None,
         }
     }
 }

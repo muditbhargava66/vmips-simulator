@@ -1,19 +1,27 @@
 # Cargo.toml
 [package]
 name = "vmips_rust"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Mudit Bhargava <muditbhargava66@gmail.com>"]
 edition = "2021"
-description = "A MIPS processor simulator written in Rust"
+description = "A MIPS processor simulator written in Rust with functional and timing simulation capabilities"
 readme = "README.md"
 repository = "https://github.com/muditbhargava66/vmips-simulator"
 license = "MIT"
 keywords = ["mips", "simulator", "processor", "education", "architecture"]
 categories = ["emulators", "simulation"]
+homepage = "https://github.com/muditbhargava66/vmips-simulator"
+documentation = "https://docs.rs/vmips_rust"
+rust-version = "1.56.0"
 
 [dependencies]
-log = "0.4.14"
-env_logger = "0.9.0"
+log = "0.4.20"
+env_logger = "0.10.0"
+rand = "0.8.5"
+colored = "2.0.4"
+clap = { version = "4.4.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 [lib]
 name = "vmips_rust"
@@ -23,8 +31,17 @@ path = "src/lib.rs"
 name = "vmips_rust"
 path = "src/main.rs"
 
+[[bin]]
+name = "main_assembler"
+path = "src/main_assembler.rs"
+
 [dev-dependencies]
-criterion = "0.3"
+criterion = { version = "0.5", features = ["html_reports"] }
+tempfile = "3.8"
+assert_cmd = "2.0"
+predicates = "3.0"
+proptest = "1.4"
+quickcheck = "1.0"
 
 [profile.release]
 lto = true
@@ -35,3 +52,11 @@ opt-level = 3
 [profile.dev]
 opt-level = 0
 debug = true
+
+[features]
+bin = []  # Feature for building the assembler as a binary
+no_clone = []  # Feature to control Clone implementation for Memory
+
+[[bench]]
+name = "simulator_benchmarks"
+harness = false

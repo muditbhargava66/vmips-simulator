@@ -32,6 +32,7 @@ use super::registers::Registers;
 use crate::utils::syscall::handle_syscall;
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub enum Exception {
     InvalidInstruction,
     MemoryAccessViolation,
@@ -770,7 +771,6 @@ pub fn decode_instruction(instruction_word: u32) -> Instruction {
             let ft = rt;
             let fs = rd;
             let fd = shamt;
-            let funct = funct;
 
             match fmt {
                 0x10 => {
@@ -870,9 +870,7 @@ fn instruction_to_string(instruction: &Instruction, raw_word: u32) -> String {
         Instruction::Jalr { rd, rs } => {
             format!("jalr ${}, ${}", rd, rs)
         },
-        Instruction::Syscall => {
-            format!("syscall")
-        },
+        Instruction::Syscall => "syscall".to_string(),
         Instruction::Break { code } => {
             format!("break {}", code)
         },
@@ -1018,9 +1016,7 @@ fn instruction_to_string(instruction: &Instruction, raw_word: u32) -> String {
         Instruction::BC1F { offset } => {
             format!("bc1f {}", offset)
         },
-        Instruction::Nop => {
-            format!("nop")
-        },
+        Instruction::Nop => "nop".to_string(),
         Instruction::InvalidInstruction => {
             format!("INVALID (0x{:08X})", raw_word)
         },

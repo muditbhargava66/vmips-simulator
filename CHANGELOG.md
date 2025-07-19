@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-07-19
+
+### Added
+- **Enhanced Error Handling System**: Comprehensive `SimulatorError` enum with specific error types
+  - Memory bounds checking with `MemoryOutOfBounds` and `MemoryMisaligned` errors
+  - Address overflow protection with `AddressOverflow` error
+  - Branch target validation with `InvalidBranchTarget` error
+  - Division by zero protection with `DivisionByZero` error
+  - Invalid instruction handling with `InvalidInstruction` error
+- **Advanced Algorithm Support Foundation**:
+  - `LoopDetector` module for identifying and optimizing loop patterns
+  - `RegisterAllocator` module for register usage analysis and optimization
+  - `PcManager` module for robust program counter management
+- **Enhanced Pipeline Visualization**: Improved pipeline stage display in timing simulator
+  - Real-time instruction flow visualization through pipeline stages
+  - Multiple output formats (Text, CSV, JSON)
+  - Status indicators for pipeline stages (Busy, Stalled, Flushed)
+  - Comprehensive instruction type support in visualization
+- **Comprehensive Test Suite**: New `error_handling.rs` with 8 test cases
+- **Code Quality Improvements**: Fixed critical Clippy errors and warnings
+
+### Enhanced
+- **Memory Safety**: Improved bounds checking and address validation
+- **Branch Handling**: Enhanced branch offset calculations with overflow protection
+- **Exception System**: Added `Debug` trait to `Exception` enum for better error reporting
+- **Algorithm Support**: Better handling of simple loops and memory access patterns
+- **Pipeline Visualization**: Fixed pipeline stage display to show instructions flowing through the pipeline
+- **Educational Value**: Improved visual representation of pipeline execution for better understanding
+- **Instruction Coverage**: Enhanced visualization support for all MIPS instruction types
+
+### Fixed
+- **Clippy Compliance**: Resolved critical errors and reduced warnings significantly
+- **Memory Access**: Enhanced validation for memory operations
+- **Branch Instructions**: Improved branch target calculation and validation
+- **Code Quality**: Removed redundant operations and improved maintainability
+- **Pipeline Visualization**: Fixed empty pipeline stage display in timing simulator visualization
+- **Instruction Flow**: Corrected instruction progression through pipeline stages for accurate visualization
+- **Missing Imports**: Added required imports for pipeline visualization functionality
+
 ## [0.2.0] - 2025-07-19
 
 ### Added

@@ -25,6 +25,9 @@
 // It re-exports the instructions, memory, registers, and simulator modules.
 
 pub mod instructions;
+pub mod loop_detector;
 pub mod memory;
+pub mod pc_manager;
+pub mod register_allocator;
 pub mod registers;
 pub mod simulator;

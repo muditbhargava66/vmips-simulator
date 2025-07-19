@@ -587,9 +587,11 @@ impl Simulator {
         // Use a match to determine which execution mode we're in, but don't borrow yet
         match &self.execution_mode {
             ExecutionMode::InOrder(_) => {
+                println!("DEBUG: Using InOrder execution mode");
                 self.run_in_order_simulation();
             },
             ExecutionMode::OutOfOrder(_) => {
+                println!("DEBUG: Using OutOfOrder execution mode");
                 self.run_out_of_order_simulation();
             },
         }
@@ -628,14 +630,7 @@ impl Simulator {
             while cycles < max_steps {
                 cycles += 1;
 
-                // Visualize if needed
-                if _visualization_enabled {
-                    if let Some(ref visualization) = &self.visualization {
-                        if cycles <= 10 || cycles % 10 == 0 {
-                            println!("{}", visualization.visualize_pipeline(pipeline, cycles));
-                        }
-                    }
-                }
+                // Visualization will be called after pipeline update
 
                 if stall_cycles > 0 {
                     stall_cycles -= 1;
@@ -672,6 +667,11 @@ impl Simulator {
                 pipeline.stages[0].instruction = Some(fetched_instr.clone());
                 pipeline.stages[0].status = PipelineStageStatus::Busy;
                 pipeline.stages[0].pc = self.pc;
+                
+                // Debug: Print pipeline stage status
+                if cycles <= 5 {
+                    println!("DEBUG: Pipeline stage 0 has instruction: {:?}", pipeline.stages[0].instruction.is_some());
+                }
 
                 // Update pipeline stages
                 for i in (1..pipeline.stages.len()).rev() {
@@ -679,6 +679,15 @@ impl Simulator {
                         pipeline.stages[i].instruction = pipeline.stages[i - 1].instruction.clone();
                         pipeline.stages[i].pc = pipeline.stages[i - 1].pc;
                         pipeline.stages[i].status = PipelineStageStatus::Busy;
+                    }
+                }
+                
+                // Visualize pipeline after updating stages
+                if _visualization_enabled {
+                    if let Some(ref visualization) = &self.visualization {
+                        if cycles <= 10 || cycles % 10 == 0 {
+                            println!("{}", visualization.visualize_pipeline(pipeline, cycles));
+                        }
                     }
                 }
 

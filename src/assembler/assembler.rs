@@ -1907,7 +1907,7 @@ impl Assembler {
     // Assemble syscall instruction
     fn assemble_syscall(&self) -> Result<u32, AssemblerError> {
         // opcode (6 bits) | 0 (20 bits) | funct (6 bits)
-        Ok((0 << 26) | (0 << 6) | 0x0C)
+        Ok(0x0C)
     }
 
     // Assemble break instruction
@@ -1946,7 +1946,7 @@ impl Assembler {
             (Token::Register(rd), Token::Register(rs)) => {
                 // Translate to "addu $rd, $zero, $rs"
                 // opcode (6 bits) | zero (5 bits) | rs (5 bits) | rd (5 bits) | 0 (5 bits) | addu funct (6 bits)
-                Ok((0 << 26) | (0 << 21) | (*rs << 16) | (*rd << 11) | (0 << 6) | 0x21)
+                Ok((*rs << 16) | (*rd << 11) | 0x21)
             },
             _ => Err(AssemblerError::SyntaxError(
                 "Invalid operands for MOVE instruction".to_string(),

@@ -37,6 +37,12 @@ pub struct Registers {
     pub target_reg: Option<u32>, // Target register for certain instructions
 }
 
+impl Default for Registers {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Registers {
     pub fn new() -> Self {
         Self {
@@ -52,7 +58,7 @@ impl Registers {
 
     pub fn read(&self, reg_num: u32) -> u32 {
         if reg_num == 0 {
-            return 0; // $zero is always 0
+            0 // $zero is always 0
         } else if reg_num < self.data.len() as u32 {
             self.data[reg_num as usize]
         } else {

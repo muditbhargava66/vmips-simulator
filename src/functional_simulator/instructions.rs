@@ -1029,12 +1029,15 @@ impl Instruction {
         )
     }
 
-    /// Gets immediate target address for branch and jump instructions
+    /// Gets immediate target offset for branch and jump instructions
+    /// For branch instructions, returns the offset that should be added to PC+4
+    /// For jump instructions, returns the target address (shifted)
     /// Returns None for register-based jumps (like JR, JALR) or non-branch/jump instructions
     pub fn get_immediate_target(&self) -> Option<u32> {
         match self {
             Instruction::J { target } | Instruction::Jal { target } => {
                 // J-type instructions: target << 2 (target is the 26-bit address)
+                // This is an absolute address (combined with upper PC bits in actual execution)
                 Some(*target << 2)
             },
             Instruction::Beq { offset, .. }
@@ -1045,10 +1048,34 @@ impl Instruction {
             | Instruction::Bgez { offset, .. }
             | Instruction::BC1T { offset }
             | Instruction::BC1F { offset } => {
-                // PC-relative branches: PC + 4 + (offset << 2)
-                // Note: This requires the current PC value, which we don't have here
-                // TODO : In a full implementation, we'd combine this with the PC from the pipeline stage
+                // PC-relative branches: returns offset to be added to PC+4
+                // The caller is responsible for adding this to the appropriate PC value
                 Some((*offset as u32) << 2)
+            },
+            _ => None,
+        }
+    }
+
+    /// Calculates the actual branch target address given the current PC
+    /// This is a helper function that properly combines PC with branch offsets
+    pub fn calculate_branch_target(&self, current_pc: u32) -> Option<u32> {
+        match self {
+            Instruction::J { target } | Instruction::Jal { target } => {
+                // J-type instructions: (PC+4 & 0xF0000000) | (target << 2)
+                let pc_plus_4 = current_pc.wrapping_add(4);
+                Some((pc_plus_4 & 0xF000_0000) | ((*target & 0x03FF_FFFF) << 2))
+            },
+            Instruction::Beq { offset, .. }
+            | Instruction::Bne { offset, .. }
+            | Instruction::Bgtz { offset, .. }
+            | Instruction::Blez { offset, .. }
+            | Instruction::Bltz { offset, .. }
+            | Instruction::Bgez { offset, .. }
+            | Instruction::BC1T { offset }
+            | Instruction::BC1F { offset } => {
+                // PC-relative branches: PC + 4 + (offset << 2)
+                let pc_plus_4 = current_pc.wrapping_add(4);
+                Some(pc_plus_4.wrapping_add(((*offset as i32) << 2) as u32))
             },
             _ => None,
         }

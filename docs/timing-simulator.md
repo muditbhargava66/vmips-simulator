@@ -1,6 +1,6 @@
-# Timing Simulator
+# Timing Simulator v0.2.1
 
-The Timing Simulator provides a detailed, cycle-accurate model of a MIPS processor, allowing for in-depth analysis of microarchitectural features, performance, and pipeline behavior.
+The Timing Simulator provides a detailed, cycle-accurate model of a MIPS processor with enhanced visualization and error handling, allowing for in-depth analysis of microarchitectural features, performance, and pipeline behavior.
 
 ## Overview
 

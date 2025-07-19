@@ -5,7 +5,7 @@
 [![CI](https://github.com/muditbhargava66/vmips-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/muditbhargava66/vmips-simulator/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Rust Version](https://img.shields.io/badge/rust-1.56%2B-orange.svg)](https://www.rust-lang.org)
-[![Release](https://img.shields.io/github/v/release/muditbhargava66/vmips-simulator)](https://github.com/muditbhargava66/vmips-simulator/releases)
+[![Release](https://img.shields.io/badge/release-v0.2.1-green)](https://github.com/muditbhargava66/vmips-simulator/releases)
 [![Last Commit](https://img.shields.io/github/last-commit/muditbhargava66/vmips-simulator)](https://github.com/muditbhargava66/vmips-simulator/commits/main)
 
 **A comprehensive, high-performance MIPS processor simulator written in Rust for education and research**
@@ -43,9 +43,10 @@
 
 ### 🔧 **Developer Experience**
 - **Modern CLI Interface** with comprehensive options
-- **Pipeline Visualization** - Real-time execution view
+- **Enhanced Pipeline Visualization** - Real-time execution view with instruction flow
 - **Performance Analytics** - Detailed statistics and metrics
 - **ELF Binary Support** - Load real MIPS programs
+- **Robust Error Handling** - Comprehensive error detection and reporting
 
 ### 📚 **Educational Focus**
 - **8 Working Examples** - From basic to advanced algorithms
@@ -298,10 +299,11 @@ See [CONTRIBUTING.md](docs/contributing.md) for detailed guidelines.
 
 ## 📊 Project Status
 
-- ✅ **Stable Release**: v0.2.0 with all core features
-- ✅ **Production Ready**: Comprehensive testing and CI/CD
-- ✅ **Educational Focus**: 8 working examples with documentation
-- ⚠️ **Next Release**: v0.2.1 will address remaining Clippy warnings for production-grade code quality
+- ✅ **Latest Release**: v0.2.1 with enhanced error handling and visualization
+- ✅ **Production Ready**: Comprehensive testing, CI/CD, and code quality improvements
+- ✅ **Educational Focus**: 8 working examples with comprehensive documentation
+- ✅ **Code Quality**: All Clippy warnings resolved, production-grade code standards
+- ✅ **Enhanced Features**: Improved pipeline visualization and algorithm support foundation
 
 ## 📄 License
 

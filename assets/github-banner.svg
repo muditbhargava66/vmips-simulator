@@ -1,106 +1,281 @@
 <svg width="1280" height="640" viewBox="0 0 1280 640" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background gradient -->
+  <!-- Definitions -->
   <defs>
+    <!-- Modern gradient background -->
     <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:1" />
-      <stop offset="50%" style="stop-color:#3730a3;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#0f172a;stop-opacity:1" />
+      <stop offset="25%" style="stop-color:#1e293b;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#334155;stop-opacity:1" />
+      <stop offset="75%" style="stop-color:#475569;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#64748b;stop-opacity:1" />
     </linearGradient>
     
-    <!-- Circuit pattern -->
-    <pattern id="circuit" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse" opacity="0.1">
-      <path d="M20 20 L80 20 M20 50 L80 50 M20 80 L80 80 M20 20 L20 80 M50 20 L50 80 M80 20 L80 80" stroke="white" stroke-width="1" fill="none"/>
-      <circle cx="20" cy="20" r="3" fill="white"/>
-      <circle cx="50" cy="20" r="3" fill="white"/>
-      <circle cx="80" cy="20" r="3" fill="white"/>
-      <circle cx="20" cy="50" r="3" fill="white"/>
-      <circle cx="50" cy="50" r="3" fill="white"/>
-      <circle cx="80" cy="50" r="3" fill="white"/>
-      <circle cx="20" cy="80" r="3" fill="white"/>
-      <circle cx="50" cy="80" r="3" fill="white"/>
-      <circle cx="80" cy="80" r="3" fill="white"/>
+    <!-- Accent gradient for highlights -->
+    <linearGradient id="accent-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#ef4444;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Circuit board pattern -->
+    <pattern id="circuit" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse" opacity="0.08">
+      <g stroke="#64748b" stroke-width="1" fill="none">
+        <!-- Horizontal lines -->
+        <line x1="20" y1="20" x2="100" y2="20"/>
+        <line x1="20" y1="40" x2="100" y2="40"/>
+        <line x1="20" y1="60" x2="100" y2="60"/>
+        <line x1="20" y1="80" x2="100" y2="80"/>
+        <line x1="20" y1="100" x2="100" y2="100"/>
+        
+        <!-- Vertical lines -->
+        <line x1="20" y1="20" x2="20" y2="100"/>
+        <line x1="40" y1="20" x2="40" y2="100"/>
+        <line x1="60" y1="20" x2="60" y2="100"/>
+        <line x1="80" y1="20" x2="80" y2="100"/>
+        <line x1="100" y1="20" x2="100" y2="100"/>
+        
+        <!-- Connection points -->
+        <circle cx="20" cy="20" r="2" fill="#64748b"/>
+        <circle cx="40" cy="40" r="2" fill="#64748b"/>
+        <circle cx="60" cy="60" r="2" fill="#64748b"/>
+        <circle cx="80" cy="80" r="2" fill="#64748b"/>
+        <circle cx="100" cy="100" r="2" fill="#64748b"/>
+        
+        <!-- Microchip representations -->
+        <rect x="30" y="30" width="20" height="10" rx="2" fill="#64748b" opacity="0.5"/>
+        <rect x="70" y="50" width="20" height="10" rx="2" fill="#64748b" opacity="0.5"/>
+      </g>
     </pattern>
     
-    <!-- Glow effect -->
-    <filter id="glow">
+    <!-- Glow effects -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
       <feMerge>
         <feMergeNode in="coloredBlur"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
+    
+    <filter id="strong-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Animated pulse -->
+    <filter id="pulse">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+      <animate attributeName="stdDeviation" values="3;6;3" dur="2s" repeatCount="indefinite"/>
+    </filter>
   </defs>
   
   <!-- Background -->
   <rect width="1280" height="640" fill="url(#bg-gradient)"/>
+  <rect width="1280" height="640" fill="url(#circuit)"/>
   
-  <!-- Central processor icon -->
-  <g transform="translate(640, 200)">
-    <!-- CPU chip outline -->
-    <rect x="-80" y="-60" width="160" height="120" rx="10" fill="none" stroke="white" stroke-width="3" opacity="0.9" filter="url(#glow)"/>
+  <!-- Decorative elements -->
+  <g opacity="0.1">
+    <!-- Left side geometric pattern -->
+    <polygon points="0,0 200,100 0,200" fill="url(#accent-gradient)"/>
+    <polygon points="0,440 200,540 0,640" fill="url(#accent-gradient)"/>
     
-    <!-- CPU pins -->
-    <g stroke="white" stroke-width="2" opacity="0.7">
-      <!-- Top pins -->
-      <line x1="-60" y1="-60" x2="-60" y2="-75"/>
-      <line x1="-40" y1="-60" x2="-40" y2="-75"/>
-      <line x1="-20" y1="-60" x2="-20" y2="-75"/>
-      <line x1="0" y1="-60" x2="0" y2="-75"/>
-      <line x1="20" y1="-60" x2="20" y2="-75"/>
-      <line x1="40" y1="-60" x2="40" y2="-75"/>
-      <line x1="60" y1="-60" x2="60" y2="-75"/>
+    <!-- Right side geometric pattern -->
+    <polygon points="1280,0 1080,100 1280,200" fill="url(#accent-gradient)"/>
+    <polygon points="1280,440 1080,540 1280,640" fill="url(#accent-gradient)"/>
+  </g>
+  
+  <!-- Main processor visualization -->
+  <g transform="translate(640, 180)">
+    <!-- Main CPU chip -->
+    <g filter="url(#strong-glow)">
+      <rect x="-120" y="-80" width="240" height="160" rx="15" fill="none" stroke="url(#accent-gradient)" stroke-width="4" opacity="0.9"/>
       
-      <!-- Bottom pins -->
-      <line x1="-60" y1="60" x2="-60" y2="75"/>
-      <line x1="-40" y1="60" x2="-40" y2="75"/>
-      <line x1="-20" y1="60" x2="-20" y2="75"/>
-      <line x1="0" y1="60" x2="0" y2="75"/>
-      <line x1="20" y1="60" x2="20" y2="75"/>
-      <line x1="40" y1="60" x2="40" y2="75"/>
-      <line x1="60" y1="60" x2="60" y2="75"/>
+      <!-- CPU pins (more detailed) -->
+      <g stroke="#f59e0b" stroke-width="2" opacity="0.8">
+        <!-- Top pins -->
+        <g>
+          <line x1="-100" y1="-80" x2="-100" y2="-100"/>
+          <line x1="-70" y1="-80" x2="-70" y2="-100"/>
+          <line x1="-40" y1="-80" x2="-40" y2="-100"/>
+          <line x1="-10" y1="-80" x2="-10" y2="-100"/>
+          <line x1="20" y1="-80" x2="20" y2="-100"/>
+          <line x1="50" y1="-80" x2="50" y2="-100"/>
+          <line x1="80" y1="-80" x2="80" y2="-100"/>
+          <line x1="110" y1="-80" x2="110" y2="-100"/>
+        </g>
+        
+        <!-- Bottom pins -->
+        <g>
+          <line x1="-100" y1="80" x2="-100" y2="100"/>
+          <line x1="-70" y1="80" x2="-70" y2="100"/>
+          <line x1="-40" y1="80" x2="-40" y2="100"/>
+          <line x1="-10" y1="80" x2="-10" y2="100"/>
+          <line x1="20" y1="80" x2="20" y2="100"/>
+          <line x1="50" y1="80" x2="50" y2="100"/>
+          <line x1="80" y1="80" x2="80" y2="100"/>
+          <line x1="110" y1="80" x2="110" y2="100"/>
+        </g>
+        
+        <!-- Left pins -->
+        <g>
+          <line x1="-120" y1="-60" x2="-140" y2="-60"/>
+          <line x1="-120" y1="-30" x2="-140" y2="-30"/>
+          <line x1="-120" y1="0" x2="-140" y2="0"/>
+          <line x1="-120" y1="30" x2="-140" y2="30"/>
+          <line x1="-120" y1="60" x2="-140" y2="60"/>
+        </g>
+        
+        <!-- Right pins -->
+        <g>
+          <line x1="120" y1="-60" x2="140" y2="-60"/>
+          <line x1="120" y1="-30" x2="140" y2="-30"/>
+          <line x1="120" y1="0" x2="140" y2="0"/>
+          <line x1="120" y1="30" x2="140" y2="30"/>
+          <line x1="120" y1="60" x2="140" y2="60"/>
+        </g>
+      </g>
       
-      <!-- Left pins -->
-      <line x1="-80" y1="-40" x2="-95" y2="-40"/>
-      <line x1="-80" y1="-20" x2="-95" y2="-20"/>
-      <line x1="-80" y1="0" x2="-95" y2="0"/>
-      <line x1="-80" y1="20" x2="-95" y2="20"/>
-      <line x1="-80" y1="40" x2="-95" y2="40"/>
+      <!-- CPU core sections -->
+      <rect x="-80" y="-50" width="160" height="100" rx="8" fill="#1e293b" opacity="0.7"/>
       
-      <!-- Right pins -->
-      <line x1="80" y1="-40" x2="95" y2="-40"/>
-      <line x1="80" y1="-20" x2="95" y2="-20"/>
-      <line x1="80" y1="0" x2="95" y2="0"/>
-      <line x1="80" y1="20" x2="95" y2="20"/>
-      <line x1="80" y1="40" x2="95" y2="40"/>
+      <!-- Pipeline stages visualization -->
+      <g opacity="0.6">
+        <rect x="-70" y="-40" width="25" height="15" rx="3" fill="#ef4444"/>
+        <text x="-57.5" y="-30" text-anchor="middle" font-family="monospace" font-size="8" fill="white">IF</text>
+        
+        <rect x="-40" y="-40" width="25" height="15" rx="3" fill="#f59e0b"/>
+        <text x="-27.5" y="-30" text-anchor="middle" font-family="monospace" font-size="8" fill="white">ID</text>
+        
+        <rect x="-10" y="-40" width="25" height="15" rx="3" fill="#10b981"/>
+        <text x="2.5" y="-30" text-anchor="middle" font-family="monospace" font-size="8" fill="white">EX</text>
+        
+        <rect x="20" y="-40" width="25" height="15" rx="3" fill="#3b82f6"/>
+        <text x="32.5" y="-30" text-anchor="middle" font-family="monospace" font-size="8" fill="white">MEM</text>
+        
+        <rect x="50" y="-40" width="25" height="15" rx="3" fill="#8b5cf6"/>
+        <text x="62.5" y="-30" text-anchor="middle" font-family="monospace" font-size="8" fill="white">WB</text>
+      </g>
+      
+      <!-- Cache hierarchy -->
+      <g opacity="0.5">
+        <rect x="-60" y="10" width="40" height="12" rx="2" fill="#64748b"/>
+        <text x="-40" y="19" text-anchor="middle" font-family="monospace" font-size="8" fill="white">L1 Cache</text>
+        
+        <rect x="-10" y="10" width="40" height="12" rx="2" fill="#64748b"/>
+        <text x="10" y="19" text-anchor="middle" font-family="monospace" font-size="8" fill="white">L2 Cache</text>
+      </g>
+      
+      <!-- MIPS label -->
+      <text x="1" y="5" text-anchor="middle" font-family="monospace" font-size="28" fill="url(#accent-gradient)" font-weight="bold" filter="url(#pulse)">MIPS R3000</text>
+    </g>
+  </g>
+  
+  <!-- Main title -->
+  <text x="640" y="340" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="64" fill="white" font-weight="800" filter="url(#strong-glow)">
+    VMIPS Simulator
+  </text>
+  
+  <!-- Version badge -->
+  <g transform="translate(950, 320)">
+    <rect x="-25" y="-12" width="50" height="24" rx="12" fill="url(#accent-gradient)" opacity="0.9"/>
+    <text x="0" y="3" text-anchor="middle" font-family="monospace" font-size="12" fill="white" font-weight="bold">v0.2.1</text>
+  </g>
+  
+  <!-- Subtitle with enhanced description -->
+  <text x="640" y="385" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" fill="#cbd5e1" opacity="0.9">
+    Advanced MIPS Processor Simulator • Enhanced Error Handling • Algorithm Support
+  </text>
+  
+  <!-- Feature grid -->
+  <g transform="translate(640, 460)" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="white" text-anchor="middle" opacity="0.85">
+    <!-- Top row -->
+    <g>
+      <circle cx="-400" cy="-5" r="3" fill="#10b981"/>
+      <text x="-390" y="0">Enhanced Error Handling</text>
+      
+      <circle cx="-150" cy="-5" r="3" fill="#3b82f6"/>
+      <text x="-140" y="0">Loop Detection</text>
+      
+      <circle cx="100" cy="-5" r="3" fill="#8b5cf6"/>
+      <text x="110" y="0">Register Analysis</text>
+      
+      <circle cx="350" cy="-5" r="3" fill="#ef4444"/>
+      <text x="360" y="0">Memory Safety</text>
     </g>
     
-    <!-- CPU core -->
-    <rect x="-40" y="-30" width="80" height="60" rx="5" fill="white" opacity="0.2"/>
-    
-    <!-- MIPS text inside CPU -->
-    <text x="0" y="5" text-anchor="middle" font-family="monospace" font-size="24" fill="white" font-weight="bold">MIPS</text>
+    <!-- Bottom row -->
+    <g transform="translate(0, 30)">
+      <circle cx="-400" cy="-5" r="3" fill="#f59e0b"/>
+      <text x="-390" y="0">Algorithm Support</text>
+      
+      <circle cx="-150" cy="-5" r="3" fill="#06b6d4"/>
+      <text x="-140" y="0">Branch Validation</text>
+      
+      <circle cx="100" cy="-5" r="3" fill="#84cc16"/>
+      <text x="110" y="0">Performance Analysis</text>
+      
+      <circle cx="350" cy="-5" r="3" fill="#ec4899"/>
+      <text x="360" y="0">Educational Focus</text>
+    </g>
   </g>
   
-  <!-- Title -->
-  <text x="640" y="340" text-anchor="middle" font-family="Arial, sans-serif" font-size="72" fill="white" font-weight="bold" filter="url(#glow)">VMIPS Simulator</text>
-  
-  <!-- Subtitle -->
-  <text x="640" y="390" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="white" opacity="0.9">MIPS R3000 Processor Simulator in Rust</text>
-  
-  <!-- Feature highlights -->
-  <g transform="translate(640, 450)" font-family="Arial, sans-serif" font-size="20" fill="white" text-anchor="middle" opacity="0.8">
-    <text x="-300" y="0">✓ Functional Simulator</text>
-    <text x="0" y="0">✓ Timing Simulator</text>
-    <text x="300" y="0">✓ Pipeline Visualization</text>
+  <!-- Technology badges -->
+  <g transform="translate(0, 60)">
+    <!-- Rust badge -->
+    <g transform="translate(120, 0)">
+      <rect x="-40" y="-20" width="80" height="40" rx="20" fill="#CE422B" opacity="0.9" filter="url(#glow)"/>
+      <text x="0" y="-2" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="white" font-weight="bold">Rust</text>
+      <text x="0" y="12" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="white" opacity="0.8">2021</text>
+    </g>
     
-    <text x="-300" y="35">✓ Cache Hierarchy</text>
-    <text x="0" y="35">✓ Out-of-Order Execution</text>
-    <text x="300" y="35">✓ 40+ Instructions</text>
+    <!-- Performance badge -->
+    <g transform="translate(240, 0)">
+      <rect x="-50" y="-20" width="100" height="40" rx="20" fill="#059669" opacity="0.9" filter="url(#glow)"/>
+      <text x="0" y="-2" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="white" font-weight="bold">High Performance</text>
+      <text x="0" y="12" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="white" opacity="0.8">Zero-Cost</text>
+    </g>
+    
+    <!-- Educational badge -->
+    <g transform="translate(380, 0)">
+      <rect x="-45" y="-20" width="90" height="40" rx="20" fill="#7c3aed" opacity="0.9" filter="url(#glow)"/>
+      <text x="0" y="-2" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="white" font-weight="bold">Educational</text>
+      <text x="0" y="12" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="white" opacity="0.8">Research</text>
+    </g>
   </g>
   
-  <!-- Language badge -->
-  <g transform="translate(180, 60)">
-    <rect x="-50" y="-25" width="100" height="50" rx="15" fill="#CE422B" opacity="0.8"/>
-    <text x="0" y="0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="white" alignment-baseline="middle" font-weight="bold">Rust</text>
+  <!-- GitHub stats area (future-compatible) -->
+  <g transform="translate(1160, 60)" opacity="0.7">
+    <rect x="-80" y="-25" width="160" height="50" rx="15" fill="#1e293b" opacity="0.8" stroke="#475569" stroke-width="1"/>
+    <text x="0" y="-8" text-anchor="middle" font-family="monospace" font-size="12" fill="#cbd5e1">GitHub Stats</text>
+    <text x="-30" y="8" text-anchor="middle" font-family="monospace" font-size="10" fill="#94a3b8">⭐ Stars</text>
+    <text x="30" y="8" text-anchor="middle" font-family="monospace" font-size="10" fill="#94a3b8">🍴 Forks</text>
+  </g>
+  
+  <!-- Bottom accent line -->
+  <rect x="0" y="620" width="1280" height="4" fill="url(#accent-gradient)" opacity="0.6"/>
+  
+  <!-- Subtle animation elements -->
+  <g opacity="0.3">
+    <!-- Floating particles -->
+    <circle cx="200" cy="150" r="2" fill="#f59e0b">
+      <animate attributeName="cy" values="150;130;150" dur="3s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.3;0.6;0.3" dur="3s" repeatCount="indefinite"/>
+    </circle>
+    
+    <circle cx="1080" cy="200" r="1.5" fill="#3b82f6">
+      <animate attributeName="cy" values="200;180;200" dur="4s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.3;0.7;0.3" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    
+    <circle cx="150" cy="500" r="1" fill="#8b5cf6">
+      <animate attributeName="cy" values="500;485;500" dur="2.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.3;0.5;0.3" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
   </g>
 </svg>

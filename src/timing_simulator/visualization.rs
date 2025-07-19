@@ -234,6 +234,7 @@ impl PipelineVisualization {
     fn format_instruction(&self, instruction: &Instruction) -> String {
         // Simplified representation based on instruction type
         match instruction {
+            // R-type instructions
             Instruction::Add { .. } => "ADD",
             Instruction::Sub { .. } => "SUB",
             Instruction::And { .. } => "AND",
@@ -241,19 +242,59 @@ impl PipelineVisualization {
             Instruction::Xor { .. } => "XOR",
             Instruction::Nor { .. } => "NOR",
             Instruction::Slt { .. } => "SLT",
-            Instruction::Addi { .. } => "ADDI",
-            Instruction::Lw { .. } => "LW",
-            Instruction::Sw { .. } => "SW",
-            Instruction::Beq { .. } => "BEQ",
-            Instruction::Bne { .. } => "BNE",
+            Instruction::Sll { .. } => "SLL",
+            Instruction::Srl { .. } => "SRL",
+            Instruction::Sra { .. } => "SRA",
+            Instruction::Sllv { .. } => "SLLV",
+            Instruction::Srlv { .. } => "SRLV",
+            Instruction::Srav { .. } => "SRAV",
             Instruction::Mult { .. } => "MULT",
             Instruction::Div { .. } => "DIV",
+            Instruction::Divu { .. } => "DIVU",
             Instruction::Mflo { .. } => "MFLO",
             Instruction::Mfhi { .. } => "MFHI",
+            Instruction::Mthi { .. } => "MTHI",
+            Instruction::Mtlo { .. } => "MTLO",
+            
+            // I-type instructions
+            Instruction::Addi { .. } => "ADDI",
+            Instruction::Addiu { .. } => "ADDIU",
+            Instruction::Andi { .. } => "ANDI",
+            Instruction::Ori { .. } => "ORI",
+            Instruction::Xori { .. } => "XORI",
+            Instruction::Lui { .. } => "LUI",
+            Instruction::Slti { .. } => "SLTI",
+            Instruction::Sltiu { .. } => "SLTIU",
+            
+            // Load/Store instructions
+            Instruction::Lw { .. } => "LW",
+            Instruction::Lb { .. } => "LB",
+            Instruction::Lbu { .. } => "LBU",
+            Instruction::Lh { .. } => "LH",
+            Instruction::Lhu { .. } => "LHU",
+            Instruction::Sw { .. } => "SW",
+            Instruction::Sb { .. } => "SB",
+            Instruction::Sh { .. } => "SH",
+            
+            // Branch instructions
+            Instruction::Beq { .. } => "BEQ",
+            Instruction::Bne { .. } => "BNE",
+            Instruction::Bgtz { .. } => "BGTZ",
+            Instruction::Blez { .. } => "BLEZ",
+            Instruction::Bltz { .. } => "BLTZ",
+            Instruction::Bgez { .. } => "BGEZ",
+            
+            // Jump instructions
             Instruction::J { .. } => "J",
             Instruction::Jal { .. } => "JAL",
             Instruction::Jr { .. } => "JR",
+            Instruction::Jalr { .. } => "JALR",
+            
+            // Special instructions
             Instruction::Nop => "NOP",
+            Instruction::InvalidInstruction => "INVALID",
+            
+            // Catch-all for any missing instructions
             _ => "??",
         }
         .to_string()

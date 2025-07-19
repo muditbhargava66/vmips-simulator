@@ -69,3 +69,9 @@ coverage/
 *.bin
 *.hex
 vmips_rust.log
+vmips_assembler.log
+
+# Knowledge and test files (development only)
+.idea/knowledge/
+.idea/test_files/
+logs/

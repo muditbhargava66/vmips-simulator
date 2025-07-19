@@ -27,6 +27,7 @@
 
 pub mod assembler;
 pub mod elf_loader;
+pub mod errors;
 pub mod functional_simulator;
 pub mod timing_simulator;
 pub mod utils;

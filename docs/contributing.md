@@ -1,6 +1,6 @@
-# Contributing to VMIPS Rust Simulator
+# Contributing to VMIPS Rust Simulator v0.2.1
 
-We welcome contributions to the VMIPS Rust Simulator! Whether it's bug fixes, new features, improved documentation, or performance optimizations, your help is greatly appreciated. Please take a moment to review this guide to make the contribution process smooth and effective.
+We welcome contributions to the VMIPS Rust Simulator! Whether it's bug fixes, new features, improved documentation, or performance optimizations, your help is greatly appreciated. With v0.2.1, we've established production-ready code quality standards and enhanced testing procedures.
 
 ## How to Contribute
 

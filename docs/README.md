@@ -16,12 +16,25 @@ Welcome to the documentation for the VMIPS Simulator project. This directory con
 
 ## Project Overview
 
-VMIPS Simulator is a comprehensive MIPS processor simulator written in Rust. It includes:
+VMIPS Simulator v0.2.1 is a comprehensive MIPS processor simulator written in Rust. It includes:
 
-1.  A functional simulator that accurately executes MIPS instructions.
-2.  A timing simulator that models a configurable pipeline (including 5-stage, Tomasulo's algorithm for out-of-order execution, superscalar capabilities, and advanced branch prediction).
-3.  An assembler that converts MIPS assembly code to machine code.
-4.  Visualization tools for pipeline behavior, cache hierarchy, and memory/register state.
+1.  **Functional Simulator** - Accurately executes MIPS instructions with enhanced error handling
+2.  **Timing Simulator** - Models configurable pipeline with improved visualization
+   - 5-stage pipeline with hazard detection
+   - Tomasulo's algorithm for out-of-order execution
+   - Superscalar capabilities and advanced branch prediction
+   - Real-time pipeline visualization with instruction flow
+3.  **Enhanced Assembler** - Converts MIPS assembly code to machine code
+4.  **Advanced Visualization Tools** - Pipeline behavior, cache hierarchy, and memory/register state
+   - Multiple output formats (Text, CSV, JSON)
+   - Status indicators for pipeline stages
+   - Comprehensive instruction type support
+
+### New in v0.2.1
+- **Enhanced Error Handling**: Comprehensive error detection and reporting system
+- **Improved Pipeline Visualization**: Real-time instruction flow through pipeline stages
+- **Algorithm Support Foundation**: Loop detection, register allocation, and PC management
+- **Production-Ready Code Quality**: All critical warnings resolved
 
 This simulator is designed for educational purposes, allowing users to understand processor behavior, pipeline hazards, cache performance, and advanced architectural concepts like out-of-order execution and branch prediction.
 

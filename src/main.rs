@@ -34,6 +34,7 @@ use vmips_rust::functional_simulator::simulator::decode_instruction;
 use vmips_rust::functional_simulator::simulator::Simulator as FunctionalSimulator;
 use vmips_rust::timing_simulator::config::{BranchPredictorType, CacheConfig, PipelineConfig};
 use vmips_rust::timing_simulator::simulator::{ExecutionMode, Simulator as TimingSimulator};
+use vmips_rust::timing_simulator::pipeline::PipelineStageStatus;
 use vmips_rust::utils::logger::{LogLevel, Logger};
 
 #[derive(Parser)]
@@ -441,6 +442,24 @@ fn run_timing_simulator_with_options(
 
         // Decode instruction
         let instruction = decode_instruction(instr_word);
+
+        // Update pipeline stages for visualization
+        if let ExecutionMode::InOrder(ref mut pipeline) = simulator.execution_mode {
+            // Simulate pipeline stages by moving instructions through the pipeline
+            // Move instructions from right to left (WB -> MEM -> EX -> ID -> IF)
+            for i in (1..pipeline.stages.len()).rev() {
+                if let Some(prev_instr) = pipeline.stages[i-1].instruction.clone() {
+                    pipeline.stages[i].instruction = Some(prev_instr);
+                    pipeline.stages[i].pc = pipeline.stages[i-1].pc;
+                    pipeline.stages[i].status = PipelineStageStatus::Busy;
+                }
+            }
+            
+            // Add new instruction to fetch stage
+            pipeline.stages[0].instruction = Some(instruction.clone());
+            pipeline.stages[0].pc = simulator.pc;
+            pipeline.stages[0].status = PipelineStageStatus::Busy;
+        }
 
         // Print the instruction being executed
         if cycle_count < 20 {

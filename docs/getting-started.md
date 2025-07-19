@@ -1,6 +1,6 @@
-# Getting Started with VMIPS Simulator
+# Getting Started with VMIPS Simulator v0.2.1
 
-This guide will walk you through the process of setting up, building, and running MIPS programs on the VMIPS Simulator. It covers both the functional and timing simulators, as well as the integrated assembler.
+This guide will walk you through the process of setting up, building, and running MIPS programs on the VMIPS Simulator. It covers both the functional and timing simulators, enhanced pipeline visualization, and the integrated assembler with improved error handling.
 
 ## Prerequisites
 

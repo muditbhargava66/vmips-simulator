@@ -509,7 +509,7 @@ impl Assembler {
                         }
 
                         if let Token::Immediate(align) = tokens[1] {
-                            if align < 0 || align > 31 {
+                            if !(0..=31).contains(&align) {
                                 return Err(AssemblerError::Range(
                                     "Alignment must be between 0 and 31".to_string(),
                                     self.current_line,
@@ -610,12 +610,12 @@ impl Assembler {
                     },
                     ".word" => {
                         if self.in_data_section {
-                            for i in 1..tokens.len() {
-                                if let Token::Comma = tokens[i] {
+                            for token in tokens.iter().skip(1) {
+                                if let Token::Comma = token {
                                     continue;
                                 }
 
-                                match &tokens[i] {
+                                match token {
                                     Token::Immediate(value) => {
                                         // Add word to data section
                                         self.data_section
@@ -637,7 +637,7 @@ impl Assembler {
                                     },
                                     _ => {
                                         return Err(AssemblerError::Syntax(
-                                            format!("Expected immediate value or symbol in .word directive, got {:?}", tokens[i]),
+                                            format!("Expected immediate value or symbol in .word directive, got {:?}", token),
                                             self.current_line,
                                         ));
                                     },
@@ -652,13 +652,13 @@ impl Assembler {
                     },
                     ".byte" => {
                         if self.in_data_section {
-                            for i in 1..tokens.len() {
-                                if let Token::Comma = tokens[i] {
+                            for token in tokens.iter().skip(1) {
+                                if let Token::Comma = token {
                                     continue;
                                 }
 
-                                if let Token::Immediate(value) = tokens[i] {
-                                    if value < -128 || value > 255 {
+                                if let Token::Immediate(value) = token {
+                                    if !(-128..=255).contains(value) {
                                         return Err(AssemblerError::Range(
                                             format!("Byte value out of range: {}", value),
                                             self.current_line,
@@ -666,13 +666,13 @@ impl Assembler {
                                     }
 
                                     // Add byte to data section
-                                    self.data_section.push(value as u8);
+                                    self.data_section.push(*value as u8);
                                     self.current_address += 1;
                                 } else {
                                     return Err(AssemblerError::Syntax(
                                         format!(
                                             "Expected immediate value in .byte directive, got {:?}",
-                                            tokens[i]
+                                            token
                                         ),
                                         self.current_line,
                                     ));

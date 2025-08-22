@@ -5,7 +5,7 @@
 [![CI](https://github.com/muditbhargava66/vmips-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/muditbhargava66/vmips-simulator/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Rust Version](https://img.shields.io/badge/rust-1.56%2B-orange.svg)](https://www.rust-lang.org)
-[![Release](https://img.shields.io/badge/release-v0.2.1-green)](https://github.com/muditbhargava66/vmips-simulator/releases)
+[![Release](https://img.shields.io/badge/release-v0.2.2-green)](https://github.com/muditbhargava66/vmips-simulator/releases)
 [![Last Commit](https://img.shields.io/github/last-commit/muditbhargava66/vmips-simulator)](https://github.com/muditbhargava66/vmips-simulator/commits/main)
 
 **A comprehensive, high-performance MIPS processor simulator written in Rust for education and research**

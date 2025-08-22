@@ -128,7 +128,6 @@ fn print_usage(program_name: &str) {
     println!("  run, r <input.s> [simulator_type]     Assemble and run a MIPS assembly file");
     println!("  interactive, i                        Start an interactive MIPS assembly session");
     println!("  --help, -h                            Show this help message");
-    println!("");
     println!("Simulator types:");
     println!("  functional                            Use the functional simulator (default)");
     println!("  timing                                Use the timing simulator");

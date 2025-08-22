@@ -24,5 +24,5 @@
 // This file is the module declaration for the assembler module.
 // It re-exports the Assembler struct from the assembler.rs file.
 
-mod assembler;
-pub use assembler::Assembler;
+mod core;
+pub use core::{Assembler, AssemblerError};

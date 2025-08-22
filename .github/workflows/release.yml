@@ -27,17 +27,12 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
           toolchain: stable
-          override: true
       
       - name: Build release binary
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --verbose
+        run: cargo build --release --verbose
       
       - name: Upload binary to release
         uses: svenstaro/upload-release-action@v2
@@ -59,7 +54,7 @@ jobs:
       
       - name: Get version from tag
         id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       
       - name: Generate changelog
         id: changelog
@@ -69,13 +64,12 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
       
       - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: VMIPS Rust ${{ steps.get_version.outputs.VERSION }}
+          tag_name: ${{ github.ref_name }}
+          name: VMIPS Rust ${{ steps.get_version.outputs.VERSION }}
           body: |
             # VMIPS Rust ${{ steps.get_version.outputs.VERSION }}
             

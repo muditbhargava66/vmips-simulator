@@ -255,7 +255,7 @@ impl PipelineVisualization {
             Instruction::Mfhi { .. } => "MFHI",
             Instruction::Mthi { .. } => "MTHI",
             Instruction::Mtlo { .. } => "MTLO",
-            
+
             // I-type instructions
             Instruction::Addi { .. } => "ADDI",
             Instruction::Addiu { .. } => "ADDIU",
@@ -265,7 +265,7 @@ impl PipelineVisualization {
             Instruction::Lui { .. } => "LUI",
             Instruction::Slti { .. } => "SLTI",
             Instruction::Sltiu { .. } => "SLTIU",
-            
+
             // Load/Store instructions
             Instruction::Lw { .. } => "LW",
             Instruction::Lb { .. } => "LB",
@@ -275,7 +275,7 @@ impl PipelineVisualization {
             Instruction::Sw { .. } => "SW",
             Instruction::Sb { .. } => "SB",
             Instruction::Sh { .. } => "SH",
-            
+
             // Branch instructions
             Instruction::Beq { .. } => "BEQ",
             Instruction::Bne { .. } => "BNE",
@@ -283,17 +283,17 @@ impl PipelineVisualization {
             Instruction::Blez { .. } => "BLEZ",
             Instruction::Bltz { .. } => "BLTZ",
             Instruction::Bgez { .. } => "BGEZ",
-            
+
             // Jump instructions
             Instruction::J { .. } => "J",
             Instruction::Jal { .. } => "JAL",
             Instruction::Jr { .. } => "JR",
             Instruction::Jalr { .. } => "JALR",
-            
+
             // Special instructions
             Instruction::Nop => "NOP",
             Instruction::InvalidInstruction => "INVALID",
-            
+
             // Catch-all for any missing instructions
             _ => "??",
         }

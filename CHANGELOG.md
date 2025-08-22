@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2025-08-22
+
+### Fixed
+- **Code Quality**: Resolved all major Clippy warnings for production-ready code
+  - Fixed module inception warning in assembler module (renamed assembler.rs to core.rs)
+  - Removed "Error" suffix from `AssemblerError` enum variants for better naming
+  - Implemented `Default` trait for `Assembler` struct
+  - Replaced `.unwrap()` calls with proper pattern matching in main.rs
+  - Fixed empty `println!()` usage in main_assembler.rs
+  - Added proper error handling patterns throughout codebase
+- **rustfmt Configuration**: Updated for stable Rust channel compatibility
+  - Removed nightly-only features (format_strings, wrap_comments, etc.)
+  - Added comprehensive documentation for configuration options
+  - Ensures consistent formatting across stable and nightly channels
+- **Error Handling**: Improved error propagation and display
+  - Made `AssemblerError` publicly accessible for testing
+  - Enhanced error message formatting and context
+  - Better error handling in file loading operations
+
+### Added
+- **Enhanced Test Coverage**: New comprehensive edge case tests
+  - Assembler Default trait validation
+  - Error display formatting verification
+  - Functional simulator boundary condition testing
+  - Timing simulator configuration validation
+  - Pipeline configuration edge cases
+  - Instruction decode robustness tests
+  - Memory alignment and consistency checks
+  - Error propagation verification
+  - State consistency validation
+- **Code Quality**: All major Clippy warnings resolved
+  - Eliminated 25+ warning instances
+  - Improved code maintainability and readability
+  - Enhanced type safety and error handling
+
+### Changed
+- **Module Structure**: Reorganized assembler module for better encapsulation
+- **Error Types**: Simplified enum variant naming for consistency
+- **Development Experience**: Improved code formatting and linting workflow
+
+### Technical Improvements
+- **Build System**: All builds now pass without warnings
+- **Code Standards**: Consistent formatting across entire codebase
+- **Type Safety**: Better error handling patterns throughout
+- **Testing**: Enhanced coverage for edge cases and boundary conditions
+
 ## [0.2.1] - 2025-07-19
 
 ### Added

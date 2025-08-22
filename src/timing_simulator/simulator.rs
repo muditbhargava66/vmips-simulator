@@ -667,10 +667,13 @@ impl Simulator {
                 pipeline.stages[0].instruction = Some(fetched_instr.clone());
                 pipeline.stages[0].status = PipelineStageStatus::Busy;
                 pipeline.stages[0].pc = self.pc;
-                
+
                 // Debug: Print pipeline stage status
                 if cycles <= 5 {
-                    println!("DEBUG: Pipeline stage 0 has instruction: {:?}", pipeline.stages[0].instruction.is_some());
+                    println!(
+                        "DEBUG: Pipeline stage 0 has instruction: {:?}",
+                        pipeline.stages[0].instruction.is_some()
+                    );
                 }
 
                 // Update pipeline stages
@@ -681,7 +684,7 @@ impl Simulator {
                         pipeline.stages[i].status = PipelineStageStatus::Busy;
                     }
                 }
-                
+
                 // Visualize pipeline after updating stages
                 if _visualization_enabled {
                     if let Some(ref visualization) = &self.visualization {

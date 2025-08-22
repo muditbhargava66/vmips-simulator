@@ -5,7 +5,7 @@
 [![CI](https://github.com/muditbhargava66/vmips-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/muditbhargava66/vmips-simulator/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Rust Version](https://img.shields.io/badge/rust-1.56%2B-orange.svg)](https://www.rust-lang.org)
-[![Release](https://img.shields.io/badge/release-v0.2.1-green)](https://github.com/muditbhargava66/vmips-simulator/releases)
+[![Release](https://img.shields.io/badge/release-v0.2.2-green)](https://github.com/muditbhargava66/vmips-simulator/releases)
 [![Last Commit](https://img.shields.io/github/last-commit/muditbhargava66/vmips-simulator)](https://github.com/muditbhargava66/vmips-simulator/commits/main)
 
 **A comprehensive, high-performance MIPS processor simulator written in Rust for education and research**
@@ -200,7 +200,7 @@ cargo test functional_simulator
 # Check code formatting
 cargo fmt --check
 
-# Run linter (warnings allowed in v0.2.0, will be fixed in v0.2.1)
+# Run linter (major warnings addressed in v0.2.2)
 cargo clippy --all-targets
 
 # Run performance benchmarks
@@ -299,7 +299,7 @@ See [CONTRIBUTING.md](docs/contributing.md) for detailed guidelines.
 
 ## 📊 Project Status
 
-- ✅ **Latest Release**: v0.2.1 with enhanced error handling and visualization
+- ✅ **Latest Release**: v0.2.2 with enhanced code quality and CI/CD improvements
 - ✅ **Production Ready**: Comprehensive testing, CI/CD, and code quality improvements
 - ✅ **Educational Focus**: 8 working examples with comprehensive documentation
 - ✅ **Code Quality**: All Clippy warnings resolved, production-grade code standards

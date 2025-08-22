@@ -14,17 +14,15 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
           toolchain: stable
-          override: true
       
       - name: Cache dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -33,58 +31,42 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       
       - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --verbose
+        run: cargo build --verbose
       
       - name: Run tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all --verbose
+        run: cargo test --all --verbose
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
           toolchain: stable
-          override: true
           components: rustfmt, clippy
       
       - name: Check formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --check
+        run: cargo fmt --check
       
       - name: Clippy check
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --all-targets
+        run: cargo clippy --all-targets
 
   examples:
     name: Test Examples
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
           toolchain: stable
-          override: true
       
       - name: Cache dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -103,17 +85,15 @@ jobs:
     name: Run Benchmarks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
           toolchain: stable
-          override: true
       
       - name: Cache dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry

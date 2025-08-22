@@ -139,39 +139,39 @@ const FP_REGISTER_MAP: &[(&str, u32)] = &[
 // Assembler error
 #[derive(Debug)]
 pub enum AssemblerError {
-    IoError(io::Error),
-    ParseError(String, usize),
-    SymbolError(String, usize),
-    SyntaxError(String, usize),
-    RegisterError(String, usize),
-    OperandError(String, usize),
-    RangeError(String, usize),
-    UnsupportedError(String, usize),
+    Io(io::Error),
+    Parse(String, usize),
+    Symbol(String, usize),
+    Syntax(String, usize),
+    Register(String, usize),
+    Operand(String, usize),
+    Range(String, usize),
+    Unsupported(String, usize),
 }
 
 impl fmt::Display for AssemblerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AssemblerError::IoError(err) => write!(f, "I/O error: {}", err),
-            AssemblerError::ParseError(msg, line) => {
+            AssemblerError::Io(err) => write!(f, "I/O error: {}", err),
+            AssemblerError::Parse(msg, line) => {
                 write!(f, "Parse error at line {}: {}", line, msg)
             },
-            AssemblerError::SymbolError(msg, line) => {
+            AssemblerError::Symbol(msg, line) => {
                 write!(f, "Symbol error at line {}: {}", line, msg)
             },
-            AssemblerError::SyntaxError(msg, line) => {
+            AssemblerError::Syntax(msg, line) => {
                 write!(f, "Syntax error at line {}: {}", line, msg)
             },
-            AssemblerError::RegisterError(msg, line) => {
+            AssemblerError::Register(msg, line) => {
                 write!(f, "Register error at line {}: {}", line, msg)
             },
-            AssemblerError::OperandError(msg, line) => {
+            AssemblerError::Operand(msg, line) => {
                 write!(f, "Operand error at line {}: {}", line, msg)
             },
-            AssemblerError::RangeError(msg, line) => {
+            AssemblerError::Range(msg, line) => {
                 write!(f, "Range error at line {}: {}", line, msg)
             },
-            AssemblerError::UnsupportedError(msg, line) => {
+            AssemblerError::Unsupported(msg, line) => {
                 write!(f, "Unsupported feature at line {}: {}", line, msg)
             },
         }
@@ -180,7 +180,7 @@ impl fmt::Display for AssemblerError {
 
 impl From<io::Error> for AssemblerError {
     fn from(error: io::Error) -> Self {
-        AssemblerError::IoError(error)
+        AssemblerError::Io(error)
     }
 }
 
@@ -214,6 +214,12 @@ pub struct Assembler {
     register_map: HashMap<String, u32>,
     fp_register_map: HashMap<String, u32>,
     current_filename: String,
+}
+
+impl Default for Assembler {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Assembler {
@@ -398,7 +404,7 @@ impl Assembler {
                                 .count();
                             self.current_address += word_count as u32 * 4;
                         } else {
-                            return Err(AssemblerError::SyntaxError(
+                            return Err(AssemblerError::Syntax(
                                 ".word directive must be in .data section".to_string(),
                                 self.current_line,
                             ));
@@ -414,7 +420,7 @@ impl Assembler {
                                 .count();
                             self.current_address += byte_count as u32;
                         } else {
-                            return Err(AssemblerError::SyntaxError(
+                            return Err(AssemblerError::Syntax(
                                 ".byte directive must be in .data section".to_string(),
                                 self.current_line,
                             ));
@@ -430,7 +436,7 @@ impl Assembler {
                                 .count();
                             self.current_address += half_count as u32 * 2;
                         } else {
-                            return Err(AssemblerError::SyntaxError(
+                            return Err(AssemblerError::Syntax(
                                 ".half directive must be in .data section".to_string(),
                                 self.current_line,
                             ));
@@ -440,7 +446,7 @@ impl Assembler {
                         // String length + 1 for null terminator if .asciiz
                         if self.in_data_section {
                             if tokens.len() < 2 {
-                                return Err(AssemblerError::SyntaxError(
+                                return Err(AssemblerError::Syntax(
                                     format!("{} directive requires a string argument", directive),
                                     self.current_line,
                                 ));
@@ -450,13 +456,13 @@ impl Assembler {
                                 let null_terminator = if directive == ".asciiz" { 1 } else { 0 };
                                 self.current_address += string.len() as u32 + null_terminator;
                             } else {
-                                return Err(AssemblerError::SyntaxError(
+                                return Err(AssemblerError::Syntax(
                                     format!("{} directive requires a string argument", directive),
                                     self.current_line,
                                 ));
                             }
                         } else {
-                            return Err(AssemblerError::SyntaxError(
+                            return Err(AssemblerError::Syntax(
                                 format!("{} directive must be in .data section", directive),
                                 self.current_line,
                             ));
@@ -466,7 +472,7 @@ impl Assembler {
                         // Allocate n bytes of space
                         if self.in_data_section {
                             if tokens.len() < 2 {
-                                return Err(AssemblerError::SyntaxError(
+                                return Err(AssemblerError::Syntax(
                                     ".space directive requires a size argument".to_string(),
                                     self.current_line,
                                 ));
@@ -474,20 +480,20 @@ impl Assembler {
 
                             if let Token::Immediate(size) = tokens[1] {
                                 if size < 0 {
-                                    return Err(AssemblerError::RangeError(
+                                    return Err(AssemblerError::Range(
                                         "Space size must be non-negative".to_string(),
                                         self.current_line,
                                     ));
                                 }
                                 self.current_address += size as u32;
                             } else {
-                                return Err(AssemblerError::SyntaxError(
+                                return Err(AssemblerError::Syntax(
                                     ".space directive requires a numeric size argument".to_string(),
                                     self.current_line,
                                 ));
                             }
                         } else {
-                            return Err(AssemblerError::SyntaxError(
+                            return Err(AssemblerError::Syntax(
                                 ".space directive must be in .data section".to_string(),
                                 self.current_line,
                             ));
@@ -496,7 +502,7 @@ impl Assembler {
                     ".align" => {
                         // Align to 2^n boundary
                         if tokens.len() < 2 {
-                            return Err(AssemblerError::SyntaxError(
+                            return Err(AssemblerError::Syntax(
                                 ".align directive requires an alignment argument".to_string(),
                                 self.current_line,
                             ));
@@ -504,7 +510,7 @@ impl Assembler {
 
                         if let Token::Immediate(align) = tokens[1] {
                             if align < 0 || align > 31 {
-                                return Err(AssemblerError::RangeError(
+                                return Err(AssemblerError::Range(
                                     "Alignment must be between 0 and 31".to_string(),
                                     self.current_line,
                                 ));
@@ -516,7 +522,7 @@ impl Assembler {
                                 self.current_address += alignment - misalignment;
                             }
                         } else {
-                            return Err(AssemblerError::SyntaxError(
+                            return Err(AssemblerError::Syntax(
                                 ".align directive requires a numeric alignment argument"
                                     .to_string(),
                                 self.current_line,
@@ -533,14 +539,14 @@ impl Assembler {
                     // Each instruction takes 4 bytes in text section
                     self.current_address += 4;
                 } else {
-                    return Err(AssemblerError::SyntaxError(
+                    return Err(AssemblerError::Syntax(
                         "Instructions must be in .text section".to_string(),
                         self.current_line,
                     ));
                 }
             },
             _ => {
-                return Err(AssemblerError::SyntaxError(
+                return Err(AssemblerError::Syntax(
                     format!("Unexpected token at start of line: {:?}", tokens[0]),
                     self.current_line,
                 ));
@@ -623,14 +629,14 @@ impl Assembler {
                                                 .extend_from_slice(&addr.to_le_bytes());
                                             self.current_address += 4;
                                         } else {
-                                            return Err(AssemblerError::SymbolError(
+                                            return Err(AssemblerError::Symbol(
                                                 format!("Undefined symbol: {}", symbol),
                                                 self.current_line,
                                             ));
                                         }
                                     },
                                     _ => {
-                                        return Err(AssemblerError::SyntaxError(
+                                        return Err(AssemblerError::Syntax(
                                             format!("Expected immediate value or symbol in .word directive, got {:?}", tokens[i]),
                                             self.current_line,
                                         ));
@@ -638,7 +644,7 @@ impl Assembler {
                                 }
                             }
                         } else {
-                            return Err(AssemblerError::SyntaxError(
+                            return Err(AssemblerError::Syntax(
                                 ".word directive must be in .data section".to_string(),
                                 self.current_line,
                             ));
@@ -653,7 +659,7 @@ impl Assembler {
 
                                 if let Token::Immediate(value) = tokens[i] {
                                     if value < -128 || value > 255 {
-                                        return Err(AssemblerError::RangeError(
+                                        return Err(AssemblerError::Range(
                                             format!("Byte value out of range: {}", value),
                                             self.current_line,
                                         ));
@@ -663,7 +669,7 @@ impl Assembler {
                                     self.data_section.push(value as u8);
                                     self.current_address += 1;
                                 } else {
-                                    return Err(AssemblerError::SyntaxError(
+                                    return Err(AssemblerError::Syntax(
                                         format!(
                                             "Expected immediate value in .byte directive, got {:?}",
                                             tokens[i]
@@ -673,7 +679,7 @@ impl Assembler {
                                 }
                             }
                         } else {
-                            return Err(AssemblerError::SyntaxError(
+                            return Err(AssemblerError::Syntax(
                                 ".byte directive must be in .data section".to_string(),
                                 self.current_line,
                             ));
@@ -688,7 +694,7 @@ impl Assembler {
 
                                 if let Token::Immediate(value) = tokens[i] {
                                     if value < -32768 || value > 65535 {
-                                        return Err(AssemblerError::RangeError(
+                                        return Err(AssemblerError::Range(
                                             format!("Halfword value out of range: {}", value),
                                             self.current_line,
                                         ));
@@ -699,7 +705,7 @@ impl Assembler {
                                         .extend_from_slice(&(value as u16).to_le_bytes());
                                     self.current_address += 2;
                                 } else {
-                                    return Err(AssemblerError::SyntaxError(
+                                    return Err(AssemblerError::Syntax(
                                         format!(
                                             "Expected immediate value in .half directive, got {:?}",
                                             tokens[i]
@@ -709,7 +715,7 @@ impl Assembler {
                                 }
                             }
                         } else {
-                            return Err(AssemblerError::SyntaxError(
+                            return Err(AssemblerError::Syntax(
                                 ".half directive must be in .data section".to_string(),
                                 self.current_line,
                             ));
@@ -718,7 +724,7 @@ impl Assembler {
                     ".ascii" | ".asciiz" => {
                         if self.in_data_section {
                             if tokens.len() < 2 {
-                                return Err(AssemblerError::SyntaxError(
+                                return Err(AssemblerError::Syntax(
                                     format!("{} directive requires a string argument", directive),
                                     self.current_line,
                                 ));
@@ -735,13 +741,13 @@ impl Assembler {
                                     self.current_address += 1;
                                 }
                             } else {
-                                return Err(AssemblerError::SyntaxError(
+                                return Err(AssemblerError::Syntax(
                                     format!("{} directive requires a string argument", directive),
                                     self.current_line,
                                 ));
                             }
                         } else {
-                            return Err(AssemblerError::SyntaxError(
+                            return Err(AssemblerError::Syntax(
                                 format!("{} directive must be in .data section", directive),
                                 self.current_line,
                             ));
@@ -750,7 +756,7 @@ impl Assembler {
                     ".space" => {
                         if self.in_data_section {
                             if tokens.len() < 2 {
-                                return Err(AssemblerError::SyntaxError(
+                                return Err(AssemblerError::Syntax(
                                     ".space directive requires a size argument".to_string(),
                                     self.current_line,
                                 ));
@@ -758,7 +764,7 @@ impl Assembler {
 
                             if let Token::Immediate(size) = tokens[1] {
                                 if size < 0 {
-                                    return Err(AssemblerError::RangeError(
+                                    return Err(AssemblerError::Range(
                                         "Space size must be non-negative".to_string(),
                                         self.current_line,
                                     ));
@@ -768,13 +774,13 @@ impl Assembler {
                                 self.data_section.extend(vec![0; size as usize]);
                                 self.current_address += size as u32;
                             } else {
-                                return Err(AssemblerError::SyntaxError(
+                                return Err(AssemblerError::Syntax(
                                     ".space directive requires a numeric size argument".to_string(),
                                     self.current_line,
                                 ));
                             }
                         } else {
-                            return Err(AssemblerError::SyntaxError(
+                            return Err(AssemblerError::Syntax(
                                 ".space directive must be in .data section".to_string(),
                                 self.current_line,
                             ));
@@ -782,7 +788,7 @@ impl Assembler {
                     },
                     ".align" => {
                         if tokens.len() < 2 {
-                            return Err(AssemblerError::SyntaxError(
+                            return Err(AssemblerError::Syntax(
                                 ".align directive requires an alignment argument".to_string(),
                                 self.current_line,
                             ));
@@ -790,7 +796,7 @@ impl Assembler {
 
                         if let Token::Immediate(align) = tokens[1] {
                             if align < 0 || align > 31 {
-                                return Err(AssemblerError::RangeError(
+                                return Err(AssemblerError::Range(
                                     "Alignment must be between 0 and 31".to_string(),
                                     self.current_line,
                                 ));
@@ -814,7 +820,7 @@ impl Assembler {
                                 self.current_address += padding;
                             }
                         } else {
-                            return Err(AssemblerError::SyntaxError(
+                            return Err(AssemblerError::Syntax(
                                 ".align directive requires a numeric alignment argument"
                                     .to_string(),
                                 self.current_line,
@@ -833,14 +839,14 @@ impl Assembler {
                     self.text_section.push(machine_code);
                     self.current_address += 4;
                 } else {
-                    return Err(AssemblerError::SyntaxError(
+                    return Err(AssemblerError::Syntax(
                         "Instructions must be in .text section".to_string(),
                         self.current_line,
                     ));
                 }
             },
             _ => {
-                return Err(AssemblerError::SyntaxError(
+                return Err(AssemblerError::Syntax(
                     format!("Unexpected token at start of line: {:?}", tokens[0]),
                     self.current_line,
                 ));
@@ -894,7 +900,7 @@ impl Assembler {
                             if reg_num < 32 {
                                 tokens.push(Token::FpRegister(reg_num));
                             } else {
-                                return Err(AssemblerError::RegisterError(
+                                return Err(AssemblerError::Register(
                                     format!("Invalid FP register number: {}", reg_num),
                                     self.current_line,
                                 ));
@@ -902,7 +908,7 @@ impl Assembler {
                         } else if let Some(&reg_num) = self.fp_register_map.get(&reg_name) {
                             tokens.push(Token::FpRegister(reg_num));
                         } else {
-                            return Err(AssemblerError::RegisterError(
+                            return Err(AssemblerError::Register(
                                 format!("Invalid FP register: {}", reg_name),
                                 self.current_line,
                             ));
@@ -913,7 +919,7 @@ impl Assembler {
                             if reg_num < 32 {
                                 tokens.push(Token::Register(reg_num));
                             } else {
-                                return Err(AssemblerError::RegisterError(
+                                return Err(AssemblerError::Register(
                                     format!("Invalid register number: {}", reg_num),
                                     self.current_line,
                                 ));
@@ -921,7 +927,7 @@ impl Assembler {
                         } else if let Some(&reg_num) = self.register_map.get(&reg_name) {
                             tokens.push(Token::Register(reg_num));
                         } else {
-                            return Err(AssemblerError::RegisterError(
+                            return Err(AssemblerError::Register(
                                 format!("Invalid register: {}", reg_name),
                                 self.current_line,
                             ));
@@ -963,7 +969,7 @@ impl Assembler {
                                     if let Ok(value) = i32::from_str_radix(&num_str[2..], 16) {
                                         tokens.push(Token::Immediate(value));
                                     } else {
-                                        return Err(AssemblerError::ParseError(
+                                        return Err(AssemblerError::Parse(
                                             format!("Invalid hex number: {}", num_str),
                                             self.current_line,
                                         ));
@@ -987,7 +993,7 @@ impl Assembler {
                                     if let Ok(value) = i32::from_str_radix(&num_str[2..], 2) {
                                         tokens.push(Token::Immediate(value));
                                     } else {
-                                        return Err(AssemblerError::ParseError(
+                                        return Err(AssemblerError::Parse(
                                             format!("Invalid binary number: {}", num_str),
                                             self.current_line,
                                         ));
@@ -1008,7 +1014,7 @@ impl Assembler {
                                     if let Ok(value) = i32::from_str_radix(&num_str[1..], 8) {
                                         tokens.push(Token::Immediate(value));
                                     } else {
-                                        return Err(AssemblerError::ParseError(
+                                        return Err(AssemblerError::Parse(
                                             format!("Invalid octal number: {}", num_str),
                                             self.current_line,
                                         ));
@@ -1038,7 +1044,7 @@ impl Assembler {
                         if let Ok(value) = num_str.parse::<i32>() {
                             tokens.push(Token::Immediate(value));
                         } else {
-                            return Err(AssemblerError::ParseError(
+                            return Err(AssemblerError::Parse(
                                 format!("Invalid decimal number: {}", num_str),
                                 self.current_line,
                             ));
@@ -1104,7 +1110,7 @@ impl Assembler {
                                         if let Ok(value) = u8::from_str_radix(&hex, 16) {
                                             string.push(value as char);
                                         } else {
-                                            return Err(AssemblerError::ParseError(
+                                            return Err(AssemblerError::Parse(
                                                 format!("Invalid hex escape sequence: \\x{}", hex),
                                                 self.current_line,
                                             ));
@@ -1117,7 +1123,7 @@ impl Assembler {
 
                                 chars.next();
                             } else {
-                                return Err(AssemblerError::ParseError(
+                                return Err(AssemblerError::Parse(
                                     "Unexpected end of string after escape character".to_string(),
                                     self.current_line,
                                 ));
@@ -1156,7 +1162,7 @@ impl Assembler {
                     break;
                 },
                 _ => {
-                    return Err(AssemblerError::SyntaxError(
+                    return Err(AssemblerError::Syntax(
                         format!("Unexpected character: {}", c),
                         self.current_line,
                     ));
@@ -1335,7 +1341,7 @@ impl Assembler {
             "swc1" => self.assemble_fp_load_store(0x39, operands),
             "bc1t" => self.assemble_fp_branch(0x11, 0x08, 0x01, operands),
             "bc1f" => self.assemble_fp_branch(0x11, 0x08, 0x00, operands),
-            _ => Err(AssemblerError::UnsupportedError(
+            _ => Err(AssemblerError::Unsupported(
                 format!("Unsupported instruction: {}", instr),
                 self.current_line,
             )),
@@ -1350,7 +1356,7 @@ impl Assembler {
         operands: &[Token],
     ) -> Result<u32, AssemblerError> {
         if operands.len() < 5 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "R-type instruction requires 3 registers".to_string(),
                 self.current_line,
             ));
@@ -1361,7 +1367,7 @@ impl Assembler {
                 // opcode (6 bits) | rs (5 bits) | rt (5 bits) | rd (5 bits) | shamt (5 bits) | funct (6 bits)
                 Ok((opcode << 26) | (*rs << 21) | (*rt << 16) | (*rd << 11) | (0 << 6) | funct)
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for R-type instruction".to_string(),
                 self.current_line,
             )),
@@ -1376,7 +1382,7 @@ impl Assembler {
         operands: &[Token],
     ) -> Result<u32, AssemblerError> {
         if operands.len() < 5 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "Shift instruction requires a register, a register, and a shift amount".to_string(),
                 self.current_line,
             ));
@@ -1385,7 +1391,7 @@ impl Assembler {
         match (&operands[0], &operands[2], &operands[4]) {
             (Token::Register(rd), Token::Register(rt), Token::Immediate(shamt)) => {
                 if *shamt < 0 || *shamt > 31 {
-                    return Err(AssemblerError::RangeError(
+                    return Err(AssemblerError::Range(
                         format!("Shift amount out of range: {}", shamt),
                         self.current_line,
                     ));
@@ -1399,7 +1405,7 @@ impl Assembler {
                     | ((*shamt as u32) << 6)
                     | funct)
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for shift instruction".to_string(),
                 self.current_line,
             )),
@@ -1409,7 +1415,7 @@ impl Assembler {
     // Assemble jump register (jr)
     fn assemble_jr(&self, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.is_empty() {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "JR instruction requires a register".to_string(),
                 self.current_line,
             ));
@@ -1420,7 +1426,7 @@ impl Assembler {
                 // opcode (6 bits) | rs (5 bits) | 0 (15 bits) | funct (6 bits)
                 Ok((0 << 26) | (*rs << 21) | (0 << 6) | 0x08)
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operand for JR instruction".to_string(),
                 self.current_line,
             )),
@@ -1430,7 +1436,7 @@ impl Assembler {
     // Assemble jump and link register (jalr)
     fn assemble_jalr(&self, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 1 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "JALR instruction requires at least one register".to_string(),
                 self.current_line,
             ));
@@ -1443,7 +1449,7 @@ impl Assembler {
                     // opcode (6 bits) | rs (5 bits) | 0 (5 bits) | rd (5 bits) | 0 (5 bits) | funct (6 bits)
                     Ok((0 << 26) | (*rs << 21) | (0 << 16) | (31 << 11) | (0 << 6) | 0x09)
                 },
-                _ => Err(AssemblerError::SyntaxError(
+                _ => Err(AssemblerError::Syntax(
                     "Invalid operand for JALR instruction".to_string(),
                     self.current_line,
                 )),
@@ -1455,13 +1461,13 @@ impl Assembler {
                     // opcode (6 bits) | rs (5 bits) | 0 (5 bits) | rd (5 bits) | 0 (5 bits) | funct (6 bits)
                     Ok((0 << 26) | (*rs << 21) | (0 << 16) | (*rd << 11) | (0 << 6) | 0x09)
                 },
-                _ => Err(AssemblerError::SyntaxError(
+                _ => Err(AssemblerError::Syntax(
                     "Invalid operands for JALR instruction".to_string(),
                     self.current_line,
                 )),
             }
         } else {
-            Err(AssemblerError::SyntaxError(
+            Err(AssemblerError::Syntax(
                 "Invalid syntax for JALR instruction".to_string(),
                 self.current_line,
             ))
@@ -1471,7 +1477,7 @@ impl Assembler {
     // Assemble I-type instruction
     fn assemble_i_type(&self, opcode: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 5 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "I-type instruction requires a register, a register, and an immediate value"
                     .to_string(),
                 self.current_line,
@@ -1481,7 +1487,7 @@ impl Assembler {
         match (&operands[0], &operands[2], &operands[4]) {
             (Token::Register(rt), Token::Register(rs), Token::Immediate(imm)) => {
                 if *imm < -32768 || *imm > 65535 {
-                    return Err(AssemblerError::RangeError(
+                    return Err(AssemblerError::Range(
                         format!("Immediate value out of range: {}", imm),
                         self.current_line,
                     ));
@@ -1497,7 +1503,7 @@ impl Assembler {
                     let offset = (addr as i32 - (self.current_address as i32 + 4)) / 4;
 
                     if offset < -32768 || offset > 32767 {
-                        return Err(AssemblerError::RangeError(
+                        return Err(AssemblerError::Range(
                             format!("Symbol offset out of range: {}", offset),
                             self.current_line,
                         ));
@@ -1506,13 +1512,13 @@ impl Assembler {
                     // opcode (6 bits) | rs (5 bits) | rt (5 bits) | immediate (16 bits)
                     Ok((opcode << 26) | (*rs << 21) | (*rt << 16) | (offset as u32 & 0xFFFF))
                 } else {
-                    Err(AssemblerError::SymbolError(
+                    Err(AssemblerError::Symbol(
                         format!("Undefined symbol: {}", symbol),
                         self.current_line,
                     ))
                 }
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for I-type instruction".to_string(),
                 self.current_line,
             )),
@@ -1522,7 +1528,7 @@ impl Assembler {
     // Assemble load upper immediate (lui)
     fn assemble_lui(&self, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "LUI instruction requires a register and an immediate value".to_string(),
                 self.current_line,
             ));
@@ -1531,7 +1537,7 @@ impl Assembler {
         match (&operands[0], &operands[2]) {
             (Token::Register(rt), Token::Immediate(imm)) => {
                 if *imm < -32768 || *imm > 65535 {
-                    return Err(AssemblerError::RangeError(
+                    return Err(AssemblerError::Range(
                         format!("Immediate value out of range: {}", imm),
                         self.current_line,
                     ));
@@ -1540,7 +1546,7 @@ impl Assembler {
                 // opcode (6 bits) | 0 (5 bits) | rt (5 bits) | immediate (16 bits)
                 Ok((0x0F << 26) | (0 << 21) | (*rt << 16) | (*imm as u32 & 0xFFFF))
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for LUI instruction".to_string(),
                 self.current_line,
             )),
@@ -1550,7 +1556,7 @@ impl Assembler {
     // Assemble load and store instructions
     fn assemble_load_store(&self, opcode: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "Load/store instruction requires a register and an address".to_string(),
                 self.current_line,
             ));
@@ -1564,7 +1570,7 @@ impl Assembler {
                 // opcode (6 bits) | base (5 bits) | rt (5 bits) | offset (16 bits)
                 Ok((opcode << 26) | (base << 21) | (*rt << 16) | (offset as u32 & 0xFFFF))
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for load/store instruction".to_string(),
                 self.current_line,
             )),
@@ -1574,7 +1580,7 @@ impl Assembler {
     // Parse an address operand (offset(base))
     fn parse_address(&self, tokens: &[Token]) -> Result<(u32, i16), AssemblerError> {
         if tokens.is_empty() {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "Expected address operand".to_string(),
                 self.current_line,
             ));
@@ -1590,7 +1596,7 @@ impl Assembler {
             match (&tokens[0], &tokens[2]) {
                 (Token::Immediate(offset), Token::Register(base)) => {
                     if *offset < -32768 || *offset > 32767 {
-                        return Err(AssemblerError::RangeError(
+                        return Err(AssemblerError::Range(
                             format!("Offset out of range: {}", offset),
                             self.current_line,
                         ));
@@ -1603,19 +1609,19 @@ impl Assembler {
                     if let Some(&addr) = self.labels.get(symbol) {
                         Ok((*base, addr as i16))
                     } else {
-                        Err(AssemblerError::SymbolError(
+                        Err(AssemblerError::Symbol(
                             format!("Undefined symbol: {}", symbol),
                             self.current_line,
                         ))
                     }
                 },
-                _ => Err(AssemblerError::SyntaxError(
+                _ => Err(AssemblerError::Syntax(
                     "Invalid address format".to_string(),
                     self.current_line,
                 )),
             }
         } else {
-            Err(AssemblerError::SyntaxError(
+            Err(AssemblerError::Syntax(
                 "Invalid address format".to_string(),
                 self.current_line,
             ))
@@ -1625,7 +1631,7 @@ impl Assembler {
     // Assemble branch instructions (beq, bne)
     fn assemble_branch(&self, opcode: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 5 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "Branch instruction requires two registers and a label".to_string(),
                 self.current_line,
             ));
@@ -1639,7 +1645,7 @@ impl Assembler {
                     let offset = (addr as i32 - (self.current_address as i32 + 4)) / 4;
 
                     if offset < -32768 || offset > 32767 {
-                        return Err(AssemblerError::RangeError(
+                        return Err(AssemblerError::Range(
                             format!("Branch target out of range: {}", offset),
                             self.current_line,
                         ));
@@ -1648,7 +1654,7 @@ impl Assembler {
                     // opcode (6 bits) | rs (5 bits) | rt (5 bits) | offset (16 bits)
                     Ok((opcode << 26) | (*rs << 21) | (*rt << 16) | (offset as u32 & 0xFFFF))
                 } else {
-                    Err(AssemblerError::SymbolError(
+                    Err(AssemblerError::Symbol(
                         format!("Undefined symbol: {}", symbol),
                         self.current_line,
                     ))
@@ -1656,7 +1662,7 @@ impl Assembler {
             },
             (Token::Register(rs), Token::Register(rt), Token::Immediate(offset)) => {
                 if *offset < -32768 || *offset > 32767 {
-                    return Err(AssemblerError::RangeError(
+                    return Err(AssemblerError::Range(
                         format!("Branch offset out of range: {}", offset),
                         self.current_line,
                     ));
@@ -1665,7 +1671,7 @@ impl Assembler {
                 // opcode (6 bits) | rs (5 bits) | rt (5 bits) | offset (16 bits)
                 Ok((opcode << 26) | (*rs << 21) | (*rt << 16) | (*offset as u32 & 0xFFFF))
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for branch instruction".to_string(),
                 self.current_line,
             )),
@@ -1675,7 +1681,7 @@ impl Assembler {
     // Assemble branch zero instructions (bgtz, blez)
     fn assemble_branch_z(&self, opcode: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "Branch instruction requires a register and a label".to_string(),
                 self.current_line,
             ));
@@ -1689,7 +1695,7 @@ impl Assembler {
                     let offset = (addr as i32 - (self.current_address as i32 + 4)) / 4;
 
                     if offset < -32768 || offset > 32767 {
-                        return Err(AssemblerError::RangeError(
+                        return Err(AssemblerError::Range(
                             format!("Branch target out of range: {}", offset),
                             self.current_line,
                         ));
@@ -1698,7 +1704,7 @@ impl Assembler {
                     // opcode (6 bits) | rs (5 bits) | rt (5 bits) | offset (16 bits)
                     Ok((opcode << 26) | (*rs << 21) | (0 << 16) | (offset as u32 & 0xFFFF))
                 } else {
-                    Err(AssemblerError::SymbolError(
+                    Err(AssemblerError::Symbol(
                         format!("Undefined symbol: {}", symbol),
                         self.current_line,
                     ))
@@ -1706,7 +1712,7 @@ impl Assembler {
             },
             (Token::Register(rs), Token::Immediate(offset)) => {
                 if *offset < -32768 || *offset > 32767 {
-                    return Err(AssemblerError::RangeError(
+                    return Err(AssemblerError::Range(
                         format!("Branch offset out of range: {}", offset),
                         self.current_line,
                     ));
@@ -1715,7 +1721,7 @@ impl Assembler {
                 // opcode (6 bits) | rs (5 bits) | rt (5 bits) | offset (16 bits)
                 Ok((opcode << 26) | (*rs << 21) | (0 << 16) | (*offset as u32 & 0xFFFF))
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for branch instruction".to_string(),
                 self.current_line,
             )),
@@ -1730,7 +1736,7 @@ impl Assembler {
         operands: &[Token],
     ) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "Branch instruction requires a register and a label".to_string(),
                 self.current_line,
             ));
@@ -1744,7 +1750,7 @@ impl Assembler {
                     let offset = (addr as i32 - (self.current_address as i32 + 4)) / 4;
 
                     if offset < -32768 || offset > 32767 {
-                        return Err(AssemblerError::RangeError(
+                        return Err(AssemblerError::Range(
                             format!("Branch target out of range: {}", offset),
                             self.current_line,
                         ));
@@ -1753,7 +1759,7 @@ impl Assembler {
                     // opcode (6 bits) | rs (5 bits) | rt (5 bits) | offset (16 bits)
                     Ok((opcode << 26) | (*rs << 21) | (rt << 16) | (offset as u32 & 0xFFFF))
                 } else {
-                    Err(AssemblerError::SymbolError(
+                    Err(AssemblerError::Symbol(
                         format!("Undefined symbol: {}", symbol),
                         self.current_line,
                     ))
@@ -1761,7 +1767,7 @@ impl Assembler {
             },
             (Token::Register(rs), Token::Immediate(offset)) => {
                 if *offset < -32768 || *offset > 32767 {
-                    return Err(AssemblerError::RangeError(
+                    return Err(AssemblerError::Range(
                         format!("Branch offset out of range: {}", offset),
                         self.current_line,
                     ));
@@ -1770,7 +1776,7 @@ impl Assembler {
                 // opcode (6 bits) | rs (5 bits) | rt (5 bits) | offset (16 bits)
                 Ok((opcode << 26) | (*rs << 21) | (rt << 16) | (*offset as u32 & 0xFFFF))
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for branch instruction".to_string(),
                 self.current_line,
             )),
@@ -1780,7 +1786,7 @@ impl Assembler {
     // Assemble jump instructions (j, jal)
     fn assemble_jump(&self, opcode: u32, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.is_empty() {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "Jump instruction requires a target".to_string(),
                 self.current_line,
             ));
@@ -1791,7 +1797,7 @@ impl Assembler {
                 // Look up symbol value
                 if let Some(&addr) = self.labels.get(symbol) {
                     if addr % 4 != 0 {
-                        return Err(AssemblerError::RangeError(
+                        return Err(AssemblerError::Range(
                             format!("Jump target not word-aligned: 0x{:08X}", addr),
                             self.current_line,
                         ));
@@ -1800,7 +1806,7 @@ impl Assembler {
                     // opcode (6 bits) | target (26 bits)
                     Ok((opcode << 26) | ((addr >> 2) & 0x3FFFFFF))
                 } else {
-                    Err(AssemblerError::SymbolError(
+                    Err(AssemblerError::Symbol(
                         format!("Undefined symbol: {}", symbol),
                         self.current_line,
                     ))
@@ -1810,7 +1816,7 @@ impl Assembler {
                 let addr = *addr as u32;
 
                 if addr % 4 != 0 {
-                    return Err(AssemblerError::RangeError(
+                    return Err(AssemblerError::Range(
                         format!("Jump target not word-aligned: 0x{:08X}", addr),
                         self.current_line,
                     ));
@@ -1819,7 +1825,7 @@ impl Assembler {
                 // opcode (6 bits) | target (26 bits)
                 Ok((opcode << 26) | ((addr >> 2) & 0x3FFFFFF))
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operand for jump instruction".to_string(),
                 self.current_line,
             )),
@@ -1834,7 +1840,7 @@ impl Assembler {
         operands: &[Token],
     ) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "MULT/DIV instruction requires two registers".to_string(),
                 self.current_line,
             ));
@@ -1845,7 +1851,7 @@ impl Assembler {
                 // opcode (6 bits) | rs (5 bits) | rt (5 bits) | 0 (10 bits) | funct (6 bits)
                 Ok((opcode << 26) | (*rs << 21) | (*rt << 16) | (0 << 6) | funct)
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for MULT/DIV instruction".to_string(),
                 self.current_line,
             )),
@@ -1860,7 +1866,7 @@ impl Assembler {
         operands: &[Token],
     ) -> Result<u32, AssemblerError> {
         if operands.is_empty() {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "MFHI/MFLO instruction requires a register".to_string(),
                 self.current_line,
             ));
@@ -1871,7 +1877,7 @@ impl Assembler {
                 // opcode (6 bits) | 0 (10 bits) | rd (5 bits) | 0 (5 bits) | funct (6 bits)
                 Ok((opcode << 26) | (0 << 21) | (0 << 16) | (*rd << 11) | (0 << 6) | funct)
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operand for MFHI/MFLO instruction".to_string(),
                 self.current_line,
             )),
@@ -1886,7 +1892,7 @@ impl Assembler {
         operands: &[Token],
     ) -> Result<u32, AssemblerError> {
         if operands.is_empty() {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "MTHI/MTLO instruction requires a register".to_string(),
                 self.current_line,
             ));
@@ -1897,7 +1903,7 @@ impl Assembler {
                 // opcode (6 bits) | rs (5 bits) | 0 (15 bits) | funct (6 bits)
                 Ok((opcode << 26) | (*rs << 21) | (0 << 6) | funct)
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operand for MTHI/MTLO instruction".to_string(),
                 self.current_line,
             )),
@@ -1916,7 +1922,7 @@ impl Assembler {
             match &operands[0] {
                 Token::Immediate(code) => {
                     if *code < 0 || *code > 1048575 {
-                        return Err(AssemblerError::RangeError(
+                        return Err(AssemblerError::Range(
                             format!("Break code out of range: {}", code),
                             self.current_line,
                         ));
@@ -1936,7 +1942,7 @@ impl Assembler {
     // Assemble move pseudo-instruction (move $rd, $rs)
     fn assemble_move(&self, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "MOVE instruction requires two registers".to_string(),
                 self.current_line,
             ));
@@ -1948,7 +1954,7 @@ impl Assembler {
                 // opcode (6 bits) | zero (5 bits) | rs (5 bits) | rd (5 bits) | 0 (5 bits) | addu funct (6 bits)
                 Ok((*rs << 16) | (*rd << 11) | 0x21)
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for MOVE instruction".to_string(),
                 self.current_line,
             )),
@@ -1958,7 +1964,7 @@ impl Assembler {
     // Assemble load immediate pseudo-instruction (li $rt, imm)
     fn assemble_li(&self, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "LI instruction requires a register and an immediate value".to_string(),
                 self.current_line,
             ));
@@ -1989,7 +1995,7 @@ impl Assembler {
                     Ok(lui)
                 }
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for LI instruction".to_string(),
                 self.current_line,
             )),
@@ -1999,7 +2005,7 @@ impl Assembler {
     // Assemble load address pseudo-instruction (la $rt, symbol)
     fn assemble_la(&self, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "LA instruction requires a register and a symbol".to_string(),
                 self.current_line,
             ));
@@ -2023,13 +2029,13 @@ impl Assembler {
 
                     Ok(lui)
                 } else {
-                    Err(AssemblerError::SymbolError(
+                    Err(AssemblerError::Symbol(
                         format!("Undefined symbol: {}", symbol),
                         self.current_line,
                     ))
                 }
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for LA instruction".to_string(),
                 self.current_line,
             )),
@@ -2039,7 +2045,7 @@ impl Assembler {
     // Assemble branch unconditional pseudo-instruction (b label)
     fn assemble_b(&self, operands: &[Token]) -> Result<u32, AssemblerError> {
         if operands.is_empty() {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "B instruction requires a label".to_string(),
                 self.current_line,
             ));
@@ -2053,7 +2059,7 @@ impl Assembler {
                     let offset = (addr as i32 - (self.current_address as i32 + 4)) / 4;
 
                     if offset < -32768 || offset > 32767 {
-                        return Err(AssemblerError::RangeError(
+                        return Err(AssemblerError::Range(
                             format!("Branch target out of range: {}", offset),
                             self.current_line,
                         ));
@@ -2063,13 +2069,13 @@ impl Assembler {
                     // opcode (6 bits) | zero (5 bits) | zero (5 bits) | offset (16 bits)
                     Ok((0x04 << 26) | (0 << 21) | (0 << 16) | (offset as u32 & 0xFFFF))
                 } else {
-                    Err(AssemblerError::SymbolError(
+                    Err(AssemblerError::Symbol(
                         format!("Undefined symbol: {}", symbol),
                         self.current_line,
                     ))
                 }
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operand for B instruction".to_string(),
                 self.current_line,
             )),
@@ -2085,7 +2091,7 @@ impl Assembler {
         operands: &[Token],
     ) -> Result<u32, AssemblerError> {
         if operands.len() < 5 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "FP R-type instruction requires 3 FP registers".to_string(),
                 self.current_line,
             ));
@@ -2096,7 +2102,7 @@ impl Assembler {
                 // opcode (6 bits) | fmt (5 bits) | ft (5 bits) | fs (5 bits) | fd (5 bits) | funct (6 bits)
                 Ok((opcode << 26) | (fmt << 21) | (*ft << 16) | (*fs << 11) | (*fd << 6) | funct)
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for FP R-type instruction".to_string(),
                 self.current_line,
             )),
@@ -2112,7 +2118,7 @@ impl Assembler {
         operands: &[Token],
     ) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "FP R-type instruction requires 2 FP registers".to_string(),
                 self.current_line,
             ));
@@ -2123,7 +2129,7 @@ impl Assembler {
                 // opcode (6 bits) | fmt (5 bits) | 0 (5 bits) | fs (5 bits) | fd (5 bits) | funct (6 bits)
                 Ok((opcode << 26) | (fmt << 21) | (0 << 16) | (*fs << 11) | (*fd << 6) | funct)
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for FP R-type instruction".to_string(),
                 self.current_line,
             )),
@@ -2140,7 +2146,7 @@ impl Assembler {
         operands: &[Token],
     ) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "FP compare instruction requires 2 FP registers".to_string(),
                 self.current_line,
             ));
@@ -2158,7 +2164,7 @@ impl Assembler {
                     | (cond << 4)
                     | funct)
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for FP compare instruction".to_string(),
                 self.current_line,
             )),
@@ -2172,7 +2178,7 @@ impl Assembler {
         operands: &[Token],
     ) -> Result<u32, AssemblerError> {
         if operands.len() < 3 {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "FP load/store instruction requires a register and an address".to_string(),
                 self.current_line,
             ));
@@ -2186,7 +2192,7 @@ impl Assembler {
                 // opcode (6 bits) | base (5 bits) | ft (5 bits) | offset (16 bits)
                 Ok((opcode << 26) | (base << 21) | (*ft << 16) | (offset as u32 & 0xFFFF))
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operands for FP load/store instruction".to_string(),
                 self.current_line,
             )),
@@ -2202,7 +2208,7 @@ impl Assembler {
         operands: &[Token],
     ) -> Result<u32, AssemblerError> {
         if operands.is_empty() {
-            return Err(AssemblerError::SyntaxError(
+            return Err(AssemblerError::Syntax(
                 "FP branch instruction requires a label".to_string(),
                 self.current_line,
             ));
@@ -2216,7 +2222,7 @@ impl Assembler {
                     let offset = (addr as i32 - (self.current_address as i32 + 4)) / 4;
 
                     if offset < -32768 || offset > 32767 {
-                        return Err(AssemblerError::RangeError(
+                        return Err(AssemblerError::Range(
                             format!("Branch target out of range: {}", offset),
                             self.current_line,
                         ));
@@ -2225,13 +2231,13 @@ impl Assembler {
                     // opcode (6 bits) | fmt (5 bits) | rt (5 bits) | offset (16 bits)
                     Ok((opcode << 26) | (fmt << 21) | (rt << 16) | (offset as u32 & 0xFFFF))
                 } else {
-                    Err(AssemblerError::SymbolError(
+                    Err(AssemblerError::Symbol(
                         format!("Undefined symbol: {}", symbol),
                         self.current_line,
                     ))
                 }
             },
-            _ => Err(AssemblerError::SyntaxError(
+            _ => Err(AssemblerError::Syntax(
                 "Invalid operand for FP branch instruction".to_string(),
                 self.current_line,
             )),

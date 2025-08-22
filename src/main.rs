@@ -33,8 +33,8 @@ use vmips_rust::functional_simulator::memory::Memory;
 use vmips_rust::functional_simulator::simulator::decode_instruction;
 use vmips_rust::functional_simulator::simulator::Simulator as FunctionalSimulator;
 use vmips_rust::timing_simulator::config::{BranchPredictorType, CacheConfig, PipelineConfig};
-use vmips_rust::timing_simulator::simulator::{ExecutionMode, Simulator as TimingSimulator};
 use vmips_rust::timing_simulator::pipeline::PipelineStageStatus;
+use vmips_rust::timing_simulator::simulator::{ExecutionMode, Simulator as TimingSimulator};
 use vmips_rust::utils::logger::{LogLevel, Logger};
 
 #[derive(Parser)]
@@ -191,29 +191,31 @@ fn run_functional_simulator(
     let mut simulator = FunctionalSimulator::new(memory_size);
 
     // Handle ELF loading or regular program loading
-    if is_elf && input_file.is_some() {
-        // Load ELF file directly into memory
-        match ElfLoader::load_file(input_file.unwrap()) {
-            Ok(elf_loader) => {
-                if let Err(e) = elf_loader.load_into_memory(&mut simulator.memory) {
-                    eprintln!("Failed to load ELF into memory: {:?}", e);
+    if is_elf {
+        if let Some(file_path) = input_file {
+            // Load ELF file directly into memory
+            match ElfLoader::load_file(file_path) {
+                Ok(elf_loader) => {
+                    if let Err(e) = elf_loader.load_into_memory(&mut simulator.memory) {
+                        eprintln!("Failed to load ELF into memory: {:?}", e);
+                        return;
+                    }
+                    println!("ELF binary loaded successfully");
+                    let segments = elf_loader.get_segments();
+                    for (vaddr, size, flags) in segments {
+                        println!(
+                            "  Segment: 0x{:08X} - 0x{:08X} (flags: 0x{:X})",
+                            vaddr,
+                            vaddr + size,
+                            flags
+                        );
+                    }
+                },
+                Err(e) => {
+                    eprintln!("Failed to load ELF file: {:?}", e);
                     return;
-                }
-                println!("ELF binary loaded successfully");
-                let segments = elf_loader.get_segments();
-                for (vaddr, size, flags) in segments {
-                    println!(
-                        "  Segment: 0x{:08X} - 0x{:08X} (flags: 0x{:X})",
-                        vaddr,
-                        vaddr + size,
-                        flags
-                    );
-                }
-            },
-            Err(e) => {
-                eprintln!("Failed to load ELF file: {:?}", e);
-                return;
-            },
+                },
+            }
         }
     } else {
         // First clear and then initialize memory with test data
@@ -332,24 +334,26 @@ fn run_timing_simulator_with_options(
     }
 
     // Handle ELF loading or regular program loading
-    if is_elf && input_file.is_some() {
-        // Load ELF file directly into memory
-        match ElfLoader::load_file(input_file.unwrap()) {
-            Ok(elf_loader) => {
-                if let Err(e) = elf_loader.load_into_memory(&mut simulator.memory) {
-                    eprintln!("Failed to load ELF into memory: {:?}", e);
+    if is_elf {
+        if let Some(file_path) = input_file {
+            // Load ELF file directly into memory
+            match ElfLoader::load_file(file_path) {
+                Ok(elf_loader) => {
+                    if let Err(e) = elf_loader.load_into_memory(&mut simulator.memory) {
+                        eprintln!("Failed to load ELF into memory: {:?}", e);
+                        return;
+                    }
+                    println!("ELF binary loaded successfully");
+                    if let Some(entry) = entry_point {
+                        simulator.pc = entry;
+                        println!("Entry point set to: 0x{:08X}", entry);
+                    }
+                },
+                Err(e) => {
+                    eprintln!("Failed to load ELF file: {:?}", e);
                     return;
-                }
-                println!("ELF binary loaded successfully");
-                if let Some(entry) = entry_point {
-                    simulator.pc = entry;
-                    println!("Entry point set to: 0x{:08X}", entry);
-                }
-            },
-            Err(e) => {
-                eprintln!("Failed to load ELF file: {:?}", e);
-                return;
-            },
+                },
+            }
         }
     } else {
         // Initialize memory with test data
@@ -448,13 +452,13 @@ fn run_timing_simulator_with_options(
             // Simulate pipeline stages by moving instructions through the pipeline
             // Move instructions from right to left (WB -> MEM -> EX -> ID -> IF)
             for i in (1..pipeline.stages.len()).rev() {
-                if let Some(prev_instr) = pipeline.stages[i-1].instruction.clone() {
+                if let Some(prev_instr) = pipeline.stages[i - 1].instruction.clone() {
                     pipeline.stages[i].instruction = Some(prev_instr);
-                    pipeline.stages[i].pc = pipeline.stages[i-1].pc;
+                    pipeline.stages[i].pc = pipeline.stages[i - 1].pc;
                     pipeline.stages[i].status = PipelineStageStatus::Busy;
                 }
             }
-            
+
             // Add new instruction to fetch stage
             pipeline.stages[0].instruction = Some(instruction.clone());
             pipeline.stages[0].pc = simulator.pc;

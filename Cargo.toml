@@ -1,7 +1,7 @@
 # Cargo.toml
 [package]
 name = "vmips_rust"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Mudit Bhargava <muditbhargava66@gmail.com>"]
 edition = "2021"
 description = "A MIPS processor simulator written in Rust with functional and timing simulation capabilities"
